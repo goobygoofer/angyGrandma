@@ -127,6 +127,35 @@ Player = function(){
 }
 player = new Player()//initialize player
 document.addEventListener("keydown", player.changeDirection);//usrInput
+//cow sprite
+Cow = function(){
+    this.cowImage = new Image()
+    this.cowImage.src = "cow.png"
+    this.frameList = []
+    for (i=0;i<4;i++){
+        this.frameList.push(i*76)
+    }
+    for (i=3;i>=0;i--){
+        this.frameList.push(i*76)
+    }
+    this.update = function(){
+        //animate cow
+        context.drawImage(//input params: xcoord on canvas, ycoord on canvas
+            this.cowImage,
+            this.frameList[0],//start image grab from x
+            0,//start image grab from y
+            75,//image width
+            75,//image height
+            (board.width/2)+75,//xcoord on canvas
+            board.height-115,//ycoord on canvas
+            75,//scalable display on canvas x
+            75//scalable display on canvas y
+        )
+        this.frameList.push(this.frameList[0])
+        this.frameList.shift()
+    }
+}
+cow = new Cow()
 //pot sprite
 smashedPotImage = new Image()
 smashedPotImage.src = "smashedPot.png"
@@ -137,6 +166,8 @@ update = function() {
     context.clearRect(0, 0, board.width, board.height);//clear canvas
     if (player.missed < 3){//game is going
         context.drawImage(startScreen,0,0)//draw background
+        //draw cow
+        cow.update()
         //draw lives (represented by enlarged pots at upper right screen)
         context.fillText("Love left", (board.width/2)+105, 15)
         for (i=0;i<player.lives;i++){
@@ -183,6 +214,7 @@ update = function() {
         document.getElementById("mobileUI").removeEventListener("touchstart",touchHandler)
         document.getElementById("mobileUI").removeEventListener("touchend",endHandler)
         context.drawImage(startScreen,0,0)
+        cow.update()
         for (broken in brokenList){
             context.drawImage(smashedPotImage, brokenList[broken][0]-blockSize,board.height-blockSize)
         }
