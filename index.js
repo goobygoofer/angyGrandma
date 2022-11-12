@@ -61,6 +61,17 @@ let debrisFall = function(){
         tempList.push([debrisX, debrisY])
     }
 }
+beerImage = new Image()
+beerImage.src = "beer.png"
+beerList = []
+let beerFall = function(){
+    beerX = Math.floor(Math.random()*(cols))*blockSize
+    beerY = 0
+    for (i=0; i<board.height/blockSize; i++){
+        beerY+=1*blockSize
+        beerList.push([beerX, beerY])
+    }
+}
 //grandma sprites
 grandmaSpritesheet = new Image()
 grandmaSpritesheet.src = "grandmaSpritesheet.png"
@@ -191,6 +202,7 @@ update = function() {
     context.clearRect(0, 0, board.width, board.height);//clear canvas
     if (player.missed < 3 && player.lives > 0){//game is going
         context.drawImage(startScreen,0,0)//draw background
+        scoreBoard.innerHTML = "Score: " + player.score
         //draw cow
         cow.update()
         //draw lives (represented by enlarged pots at upper right screen)
@@ -213,6 +225,18 @@ update = function() {
         for (broken in brokenList){//draw broken pots
             context.drawImage(smashedPotImage, brokenList[broken][0]-blockSize,board.height-blockSize)
         }
+        if (beerList.length!=0){
+            context.drawImage(//draw/push/shift should be a fxn
+                beerImage, 0, 0,
+                25, 25, beerList[0][0], beerList[0][1], 25, 25)
+            if (beerList[0][0]==player.xCoord && beerList[0][1]==player.yCoord){
+                //caught beer
+                beerList=[]
+                player.score+=5
+            } else{
+                beerList.shift()
+            }
+        }
         player.update()//draw/update player
         if (debrisList.length!=0){//do this for molotovList
             if (debrisList[0][0]==player.xCoord && debrisList[0][1]==player.yCoord-blockSize){//player scores
@@ -222,7 +246,7 @@ update = function() {
                     player.missed-=1
                 }
                 player.score+=1
-                scoreBoard.innerHTML = "Score: " + player.score
+                //scoreBoard.innerHTML = "Score: " + player.score
                 debrisList = []
                 return
             } 
@@ -306,6 +330,7 @@ Start = function(){//start update and debrisFall intervals
     var start = setInterval(update, 100);
     var fall = setInterval(debrisFall, 1900)
     var molotovInt = setInterval(molotovFall, 7500)
+    var beerInt = setInterval(beerFall, 10000)
 }
 intro = function(){
     context.font = "12px Courier"
