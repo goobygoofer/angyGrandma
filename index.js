@@ -23,9 +23,34 @@ for (i=0; i<board.width/blockSize; i++){//top/bottom
     }
 //falling pot sprites
 debrisList = []
+molotovList = []
 debrisImage = new Image()
 debrisImage.src = "potPic.png"
- 
+molotovImage = new Image()
+molotovImage.src = "molotov.png"
+molotovFrames = [[0,0],[25,0]]
+explodeImage = new Image()
+explodeImage.src = "explosion2.png"
+explodeFrames = []
+explodeX = 0
+explosionHit = false
+for (i=0;i<5;i++){
+    explodeFrames.push(i*76)
+}
+explodeCoords = []
+let molotovFall = function(){
+    molotovX = Math.floor(Math.random()*(cols))*blockSize
+    molotovY = 0
+    for (i=0; i<board.height/blockSize; i++){
+        molotovY+=1*blockSize
+        molotovList.push([molotovX, molotovY])
+    }
+}
+let molotovExplode = function(x){
+    for (i=0;i<5;i++){
+        explodeCoords.push(x-blockSize)
+    }
+}
 let debrisFall = function(){
     debrisX = Math.floor(Math.random()*(cols))*blockSize
     debrisY = 0
@@ -164,7 +189,7 @@ brokenList = []//pots that have hit the ground
 going = true
 update = function() {
     context.clearRect(0, 0, board.width, board.height);//clear canvas
-    if (player.missed < 3){//game is going
+    if (player.missed < 3 && player.lives > 0){//game is going
         context.drawImage(startScreen,0,0)//draw background
         //draw cow
         cow.update()
@@ -178,11 +203,18 @@ update = function() {
         if (debrisList.length != 0){//draw debris(falling pots)
             context.drawImage(debrisImage,debrisList[0][0],debrisList[0][1])
         }
+        if (molotovList.length != 0){//draw molotov
+            context.drawImage(//draw/push/shift should be a fxn
+                molotovImage, molotovFrames[0][0], molotovFrames[0][1],
+                25, 25, molotovList[0][0], molotovList[0][1], 25, 25)
+        }
+        molotovFrames.push(molotovFrames[0])
+        molotovFrames.shift()
         for (broken in brokenList){//draw broken pots
             context.drawImage(smashedPotImage, brokenList[broken][0]-blockSize,board.height-blockSize)
         }
         player.update()//draw/update player
-        if (debrisList.length!=0){
+        if (debrisList.length!=0){//do this for molotovList
             if (debrisList[0][0]==player.xCoord && debrisList[0][1]==player.yCoord-blockSize){//player scores
                 player.streak+=1
                 if (player.streak%10==0 && player.lives<3){
@@ -203,6 +235,33 @@ update = function() {
                     debrisList.shift()
                 }
             } else {debrisList.shift()}//else player did not score and pot did not hit ground(yet)
+            //molotov
+        }
+        if (molotovList.length!=0){
+            if (molotovList[0][1]==board.height-blockSize){//molotov hits ground
+                molotovExplode(molotovList[0][0])//x coord of impact, y draw just ground lvl(should make a constant?)
+                molotovList=[]
+            } else {molotovList.shift()}
+        }
+        if (explodeCoords.length!=0){
+            context.drawImage(//draw/push/shift should be a fxn
+                explodeImage, explodeFrames[0], 0,
+                75, 75, explodeCoords[0], board.height-80, 75, 75)
+            for (i=-1;i<4;i++){
+                if (explodeCoords[0]+i*blockSize==player.xCoord && explosionHit == false){
+                    player.lives -= 1
+                    explosionHit=true
+                    break
+                }
+            }
+            if (explodeCoords.length!=0){
+                explodeCoords.shift()
+                explodeFrames.push(explodeFrames[0])
+                explodeFrames.shift()
+            }
+        }
+        else if (explodeCoords.length==0){
+            explosionHit=false
         }
     } else {
         //game over
@@ -246,6 +305,7 @@ Start = function(){//start update and debrisFall intervals
     document.removeEventListener("keyup",Start)
     var start = setInterval(update, 100);
     var fall = setInterval(debrisFall, 1900)
+    var molotovInt = setInterval(molotovFall, 7500)
 }
 intro = function(){
     context.font = "12px Courier"
@@ -254,12 +314,13 @@ intro = function(){
         //display left and right button. white if unpressed, red if pressed. left arrow x=0, right arrow x=mobileUI.width-75
         context.fillText("Grandma ate too much Angels Trumpet!", 1, 25)
         context.fillText("She's throwing all her nice pots off the roof!",1,50)
-        context.fillText("Use arrow keys (pc) or arrow buttons (mobile)",1,75)
+        context.fillText("Use arrow keys (pc) or green arrows (mobile)",1,75)
         context.fillText("to move under the pots to catch them!",1,100)
-        context.fillText("Don't miss too many pots or Grandma will be angy...",1,125)
-        context.fillText("Press any key to start",1,150)
-        context.fillText("mobile users:",1,200)
-        context.fillText("Tap left or right green arrow to start",1,225)
+        context.fillText("Avoid grandma's cocktails of death!",1,125)
+        context.fillText("Don't miss too many pots or Grandma will be angy...",1,150)
+        context.fillText("Press any key to start",1,175)
+        context.fillText("mobile users:",1,225)
+        context.fillText("Tap left or right green arrow to start",1,250)
         var mobUIupdate = setInterval(mobileUIUpdate, 100)
         document.addEventListener("keyup", Start);
     }
