@@ -18,7 +18,12 @@ gameDisplay = function(){
 }
 let display = new gameDisplay()
 
+//falling things shadow
+shadowImg = new Image()
+shadowImg.src = "shadow.png"
 //falling pots
+var potSmashSound = new Audio("smash.mp3")
+var potCatchSound = new Audio("catch.mp3")
 debrisList = []
 debrisImage = new Image()
 debrisImage.src = "potPic.png"
@@ -33,6 +38,7 @@ let debrisFall = function(){
     }
 }
 //falling/exploding molotovs
+var molotovSound = new Audio("molotovBoom.mp3")
 molotovList = []
 molotovImage = new Image()
 molotovImage.src = "molotov.png"
@@ -64,6 +70,7 @@ smashedPotImage = new Image()
 smashedPotImage.src = "smashedPot.png"
 brokenList = []//pots that have hit the ground
 //beer bonus
+beerSound = new Audio("drink.mp3")
 beerImage = new Image()
 beerImage.src = "beer.png"
 beerList = []
@@ -76,6 +83,8 @@ let beerFall = function(){
     }
 }
 //grandma sprites
+chewingSound=new Audio("chewing.mp3")
+growlingSound = new Audio("growling.mp3")
 grandmaSpritesheet = new Image()
 grandmaSpritesheet.src = "grandmaSpritesheet.png"
 grandmaThrowImage = new Image()
@@ -220,11 +229,15 @@ molotovUpdate = function(){
         display.context.drawImage(//draw/push/shift should be a fxn
             molotovImage, molotovFrames[0][0], molotovFrames[0][1],
             25, 25, molotovList[0][0], molotovList[0][1], 25, 25)
+        display.context.drawImage(
+            shadowImg,molotovList[0][0],display.board.height-display.blockSize
+        )
     }
     molotovFrames.push(molotovFrames[0])
     molotovFrames.shift()
     if (molotovList.length!=0){
         if (molotovList[0][1]==display.board.height-display.blockSize){//molotov hits ground
+            molotovSound.play()
             molotovExplode(molotovList[0][0])//x coord of impact, y draw just ground lvl(should make a constant?)
             molotovList=[]
         } else {molotovList.shift()}
@@ -258,8 +271,12 @@ beerUpdate = function(){
         display.context.drawImage(
             beerImage, 0, 0,
             25, 25, beerList[0][0], beerList[0][1], 25, 25)
+        display.context.drawImage(
+            shadowImg,beerList[0][0],display.board.height-display.blockSize
+        )
         if (beerList[0][0]==player.xCoord && beerList[0][1]==player.yCoord){
             //caught beer
+            beerSound.play()
             beerList=[]
             player.score+=5
         } else{
@@ -273,12 +290,16 @@ potUpdate = function(){
             grandmaThrow(debrisList[0][0])
         }
         display.context.drawImage(debrisImage,debrisList[0][0],debrisList[0][1])
+        display.context.drawImage(
+            shadowImg,debrisList[0][0],display.board.height-display.blockSize
+        )
     }  
     for (broken in brokenList){//draw broken pots
         display.context.drawImage(smashedPotImage, brokenList[broken][0]-display.blockSize,display.board.height-display.blockSize)
     }
     if (debrisList.length!=0){
         if (debrisList[0][0]==player.xCoord && debrisList[0][1]==player.yCoord-display.blockSize){//player scores
+            potCatchSound.play()
             player.streak+=1
             if (player.streak%10==0 && player.lives<3){
                 player.lives+=1
@@ -289,6 +310,7 @@ potUpdate = function(){
             return
         } 
         else if (debrisList[0][1]==display.board.height){//pot hits ground
+            potSmashSound.play()
             player.lives-=1
             player.missed+=1
             player.streak=0
@@ -299,13 +321,22 @@ potUpdate = function(){
         } else {debrisList.shift()}//else player did not score and pot did not hit ground(yet)
     }
 }
+growlPlayed=false
 grandmaUpdate = function(){//gogoGrandma has been initiated
+    if (growlPlayed!=true){
+        growlingSound.play()
+        growlPlayed=true
+    }
     if (grandmaFallFrames.length>2){//grandma is descending upon you
         display.context.drawImage(
             grandmaSpritesheet, grandmaMain[1], grandmaMain[0], 75, 75,
             grandmaFallFrames[0][0], grandmaFallFrames[0][1], 75, 75)
+        display.context.drawImage(
+            shadowImg,grandmaMain[0],display.board.height-display.blockSize
+        )
         grandmaFallFrames.shift()
     } else {//grandma is raging
+        chewingSound.play()
         display.context.drawImage(
             grandmaSpritesheet, grandmaRageFrames[0][1], grandmaRageFrames[0][0],
             75, 75, player.xCoord-display.blockSize, player.yCoord-display.blockSize, 75, 75)
@@ -443,4 +474,9 @@ endHandler = function(e){
 }
 document.getElementById("mobileUI").addEventListener("touchstart",touchHandler, false)
 document.getElementById("mobileUI").addEventListener("touchend", endHandler, false)
+
+devMode = function(){
+    player.lives = 1000
+    player.missed=-1000
+}
 intro()
