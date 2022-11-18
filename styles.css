@@ -1,0 +1,5 @@
+body {font-family: 'Courier New', Courier, monospace; text-align: center;background-image: url('./cowgif.gif');background-color:rgba(212, 138, 255, 0.75);}
+div {background-color:rgb(21, 255, 0,0.75);}
+A {background-color:rgb(21, 255, 0,0.75)}
+ul {background-color:rgb(21, 255, 0,0.75);list-style-image:url(./angry-grandma-page/potPic.png)}
+h1 {background-color:rgb(255, 115, 169,0.75);}
