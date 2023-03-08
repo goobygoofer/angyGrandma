@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf8">
+<head>
+</head>
+<body onload="setup()">
+  <div id='kanji-disp' style='width:px'></div>
+  <div id='info-disp' style='width:300px'></div>
+  <script src="data.js" lang='ja' enctype='utf-8'></script><!--this was easier than fiddling with an actual json file!-->
+  <div>
+  	<input type="button" value="<" onclick="left()">
+	<input type="text" id="input">
+	<input type="button" value=">" onclick="right()">
+  </div>
+  <div>
+    <input type="button" value="Search" onclick="search()">
+  </div>
+  <!--etymologies[kanji].etymology, mnemonic, meanings, readings-->
+  <script>
+    //might not even need this but it useful for x-reference
+	var viewPosition = 1;
+    var dataTrack = {};
+    let count=0;
+	for (kanji in etymologies){
+	  dataTrack[count]=kanji;
+	  count+=1;
+	};
+	for (kanji in dataTrack){
+	    etymologies[dataTrack[kanji]]["num"]=parseInt(kanji);//+1;
+	};
+	
+	var kanjiInput = document.getElementById('input');
+	var kanjiDisp = document.getElementById('kanji-disp');
+	var kanjiInfo = document.getElementById('info-disp');
+	
+	var search = function(){
+	    console.log("searching for kanji data...")
+		console.log(kanjiInput.value);
+		//display fxn that takes kanji as arg
+		viewPosition=etymologies[kanjiInput.value].num;
+		display(kanjiInput.value);
+	}
+	
+	var left = function(){
+	    console.log(kanjiInput.value);
+	    console.log("-1 to position unless pos==1")
+		//display fxn that takes position as arg
+		if (viewPosition==1){
+		    viewPosition=1945;
+		}
+		else {
+		    viewPosition-=1;
+		}
+		display(dataTrack[viewPosition-1]);
+	};
+	var right = function(){
+	    console.log(kanjiInput.value);
+	    console.log("+1 to position unless pos==1945")
+		//display fxn that takes position as arg
+		if (viewPosition==1945){
+		    viewPosition=1;
+		}
+		else {
+		    viewPosition+=1;
+		};
+		display(dataTrack[viewPosition-1]);
+	}
+	
+	var display = function(kanji){
+	    //if #1-1945, dataTrack[kanji]
+		//else kanji, etymologies[kanji]
+		reset();
+		kanjiDisp.innerHTML=kanji;
+		kanjiInfo.innerHTML+= "(" + etymologies[kanji].meanings + ")</br></br>";
+		kanjiInfo.innerHTML+=etymologies[kanji].etymology + "</br></br>";
+		kanjiInfo.innerHTML+=etymologies[kanji].mnemonic + "</br></br>";
+		kanjiInfo.innerHTML+="Readings:</br>";
+		kanjiInfo.innerHTML+= "On: " + etymologies[kanji].readings.kun + "</br></br>";
+		kanjiInfo.innerHTML+= "Kun: " + etymologies[kanji].readings.on;
+	};
+	var setup = function(){
+	    display('一');
+	};
+	var reset = function(){
+	    kanjiDisp.innerHTML='';
+		kanjiInfo.innerHTML='';
+	};
+  </script>
+</body>
+</html>
