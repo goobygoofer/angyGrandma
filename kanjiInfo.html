@@ -1,36 +1,66 @@
 <!DOCTYPE html>
 <html>
-  <meta charset="UTF-8">
+  <!--<meta charset="UTF-8"><!--try with and without this one, something was funky-->
 <head>
-  <!--<link rel="stylesheet" href="./styles.css">-->
+
   <meta charset="UTF-8">
   <meta name="viewport", content = "width=device-width, initial-scale=1.0">
   <title>Jouyou Kanji Info</title>
+  
+  <style>
+    .bold{
+	  font-weight: bold;
+	}
+    .big {
+	  font-size:30px;
+	}
+    .inset {
+	  border-style: inset;
+	}
+	.center {
+	  display: flex;
+	  justify-content: center;
+	  align-items: center; 
+	}
+  </style>
+  
 </head>
 
-<body onload="setup()"><!--is this best practice or?-->
-  <script src="data.js" lang='ja' enctype='utf-8'></script><!--this was easier than fiddling with an actual json file!-->
-  <!--should probably put main script (below) in local dir-->
-  
-  <div id='kanji-disp' style='width:px'></div>
-  
-  <div id='info-disp' style='width:300px'></div>
 
-  <div>
-  	<input type="button" value="<" onclick="left()">
-	<input type="text" id="input">
-	<input type="button" value=">" onclick="right()">
-  </div>
+<body onload="setup()"><!--is this best practice or?-->
+
+  <script src="data.js" lang='ja' enctype='utf-8'></script><!--this was easier than fiddling with an actual json file!-->
   
-  <div>
-    <input type="button" value="Search" onclick="search()">
+  <div style='width:400px'>
+	  <div class="center" style='padding-bottom:15px'>
+		<input type="button" value="<" onclick="left()">
+		<input type="text" id="input">
+		<input type="button" value=">" onclick="right()">
+	  </div>
+	  
+	  <div class="center" style='padding-bottom:15px'>
+	    <div id='jisho-link' style='padding-right:15px'></div>
+		<input type="button" value="Search" onclick="search()">
+		<div style='padding-left:15px'>
+		<A class='center bold' href="https://goobygoofer.github.io/angyGrandma/index.html">home</A>
+		</div>
+	  </div>
+	  
+	  <div class='center'>
+		<div id='kanji-disp' class='big inset'></div>
+	  </div>
+	  <div class='center'>
+		<div id='meaningDisp' class='bold'></div>
+	  </div>
+	  
+	  <div id='info-disp' style='width:300px; padding-left:50px;'></div>
   </div>
-  
+</body>
+
 <script>
-    //might not even need this but it useful for x-reference
 	var viewPosition = 1;
     var dataTrack = {};
-    let count=0;
+    let count=1;
 	for (kanji in etymologies){
 	  dataTrack[count]=kanji;
 	  count+=1;
@@ -42,62 +72,57 @@
 	var kanjiInput = document.getElementById('input');
 	var kanjiDisp = document.getElementById('kanji-disp');
 	var kanjiInfo = document.getElementById('info-disp');
+	var jishoLink = document.getElementById('jisho-link');
 	
 	var search = function(){
-	    console.log("searching for kanji data...")
-		console.log(kanjiInput.value);
-		//display fxn that takes kanji as arg
-		viewPosition=etymologies[kanjiInput.value].num;
-		display(kanjiInput.value);
+		let kanji=null;
+		if (parseInt(kanjiInput.value).toString()!='NaN'){
+		    kanji = dataTrack[parseInt(kanjiInput.value)];
+			viewPosition = parseInt(kanjiInput.value);
+		} else {
+		    kanji=kanjiInput.value;
+			viewPosition=etymologies[kanji].num;
+		}
+		display(kanji);
 	}
 	
 	var left = function(){
-	    console.log(kanjiInput.value);
-	    console.log("-1 to position unless pos==1")
-		//display fxn that takes position as arg
 		if (viewPosition==1){
 		    viewPosition=1945;
 		}
 		else {
 		    viewPosition-=1;
 		}
-		display(dataTrack[viewPosition-1]);
+		display(dataTrack[viewPosition]);
 	};
 	var right = function(){
-	    console.log(kanjiInput.value);
-	    console.log("+1 to position unless pos==1945")
 		if (viewPosition==1945){
 		    viewPosition=1;
 		}
 		else {
 		    viewPosition+=1;
 		};
-		display(dataTrack[viewPosition-1]);
+		display(dataTrack[viewPosition]);
 	}
 	
 	var display = function(kanji){
-	    //if #1-1945, dataTrack[kanji]
-		//else kanji, etymologies[kanji]
 		reset();
 		kanjiDisp.innerHTML=kanji;
-		kanjiInfo.innerHTML+= "(" + etymologies[kanji].meanings + ")</br></br>";
+		meaningDisp.innerHTML+= "(" + etymologies[kanji].meanings + ")</br></br>";
 		kanjiInfo.innerHTML+=etymologies[kanji].etymology + "</br></br>";
 		kanjiInfo.innerHTML+=etymologies[kanji].mnemonic + "</br></br>";
-		kanjiInfo.innerHTML+="Readings:</br>";
-		kanjiInfo.innerHTML+= "On: " + etymologies[kanji].readings.kun + "</br></br>";
-		kanjiInfo.innerHTML+= "Kun: " + etymologies[kanji].readings.on + "</br></br>";
-		kanjiInfo.innerHTML+= "<A href=\"https://www.jisho.org/search/" + kanji + "%20%23kanji\">jisho</A>";
-		//kanjiInfo.innerHTML+= kanji;
-        //kanjiInfo.innerHTML+="%20%23kanji\">jisho</A>";
+		kanjiInfo.innerHTML+= "<b>On</b>: " + etymologies[kanji].readings.kun + "</br></br>";
+		kanjiInfo.innerHTML+= "<b>Kun</b>: " + etymologies[kanji].readings.on + "</br></br>";
+		jishoLink.innerHTML+= "<A href=\"https://www.jisho.org/search/" + kanji + "%20%23kanji\"  target=\"_blank\">jisho</A>";
 	};
 	var setup = function(){
 	    display('一');
 	};
 	var reset = function(){
 	    kanjiDisp.innerHTML='';
+		meaningDisp.innerHTML='';
 		kanjiInfo.innerHTML='';
+		jishoLink.innerHTML='';
 	};
 </script>
-<A href="https://goobygoofer.github.io/angyGrandma/index.html">home</A>
-</body>
 </html>
