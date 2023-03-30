@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Canvas Legbutt</title>
     <style>
       #field {
@@ -18,25 +19,28 @@
     </style>
   </head>
   <body>
-    <div id="field">
+    <div id="field" style="margin: 0 auto;">
       <img id="player" src="" width="20" height="20">
     </div>
-    <div>
-      <button type="button" id="leftButton"><</button>
-      <div>
+    <div style="text-align:center">
+        <div style="text-align:center">
         <button type="button" id="upButton">^</button>
+        </div>
+        <button type="button" id="leftButton"><</button>
         <button type="button" id="downButton">v</button>
-      </div>
-      <button type="button" id="rightButton">></button>
+        <button type="button" id="rightButton">></button>
     </div>
   </body>
 </html>
 
 <script>
+// set the initial scale for mobile devices
+const viewportMeta = document.querySelector('meta[name="viewport"]');
+viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
 
 // set up player image
 const playerImg = document.getElementById('player');
-playerImg.src = "path/to/player.jpg";
+playerImg.src = "peck.jpg";
 
 // set up player position and movement
 let playerX = 0;
@@ -100,4 +104,5 @@ document.addEventListener('keydown', (event) => {
 });
 
 </script>
+
 
