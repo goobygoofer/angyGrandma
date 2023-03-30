@@ -21,9 +21,6 @@
     <div id="field">
       <img id="player" src="" width="20" height="20">
     </div>
-    <div>
-      Arrow Keys To Move
-    </div>
   </body>
 </html>
 
@@ -31,7 +28,7 @@
 
 // set up player image
 const playerImg = document.getElementById('player');
-playerImg.src = "./peck.jpg";
+playerImg.src = "path/to/player.jpg";
 
 // set up player position and movement
 let playerX = 0;
@@ -65,4 +62,61 @@ document.addEventListener('keydown', (event) => {
     playerImg.style.left = `${playerX}px`;
   }
 });
+
+// add touch listener for mobile users
+let touchStartX = null;
+let touchStartY = null;
+
+document.addEventListener('touchstart', (event) => {
+  touchStartX = event.touches[0].clientX;
+  touchStartY = event.touches[0].clientY;
+});
+
+document.addEventListener('touchmove', (event) => {
+  if (touchStartX === null || touchStartY === null) {
+    return;
+  }
+
+  const touchEndX = event.touches[0].clientX;
+  const touchEndY = event.touches[0].clientY;
+
+  const dx = touchEndX - touchStartX;
+  const dy = touchEndY - touchStartY;
+
+  // move player up
+  if (dy < 0 && playerY > 0) {
+    playerY -= 20;
+    playerImg.style.top = `${playerY}px`;
+  }
+
+  // move player down
+  if (dy > 0 && playerY < 280) {
+    playerY += 20;
+    playerImg.style.top = `${playerY}px`;
+  }
+
+  // move player left
+  if (dx < 0 && playerX > 0) {
+    playerX -= 20;
+    playerImg.style.left = `${playerX}px`;
+  }
+
+  // move player right
+  if (dx > 0 && playerX < 280) {
+    playerX += 20;
+    playerImg.style.left = `${playerX}px`;
+  }
+
+  // reset touch start position
+  touchStartX = null;
+  touchStartY = null;
+
+  event.preventDefault();
+});
+
+document.addEventListener('touchend', (event) => {
+  touchStartX = null;
+  touchStartY = null;
+});
+
 </script>
