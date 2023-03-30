@@ -21,6 +21,14 @@
     <div id="field">
       <img id="player" src="" width="20" height="20">
     </div>
+    <div>
+      <button type="button" id="leftButton"><</button>
+      <div>
+        <button type="button" id="upButton">^</button>
+        <button type="button" id="downButton">v</button>
+      </div>
+      <button type="button" id="rightButton">></button>
+    </div>
   </body>
 </html>
 
@@ -28,92 +36,68 @@
 
 // set up player image
 const playerImg = document.getElementById('player');
-playerImg.src = "peck.jpg";
+playerImg.src = "path/to/player.jpg";
 
 // set up player position and movement
 let playerX = 0;
 let playerY = 0;
 
-// add key listener for arrow keys
-document.addEventListener('keydown', (event) => {
-  const key = event.key;
-
+// function to handle button clicks/touches
+function movePlayer(direction) {
   // move player up
-  if (key === 'ArrowUp' && playerY > 0) {
+  if (direction === 'up' && playerY > 0) {
     playerY -= 20;
     playerImg.style.top = `${playerY}px`;
   }
 
   // move player down
-  if (key === 'ArrowDown' && playerY < 280) {
+  if (direction === 'down' && playerY < 280) {
     playerY += 20;
     playerImg.style.top = `${playerY}px`;
   }
 
   // move player left
-  if (key === 'ArrowLeft' && playerX > 0) {
+  if (direction === 'left' && playerX > 0) {
     playerX -= 20;
     playerImg.style.left = `${playerX}px`;
   }
 
   // move player right
-  if (key === 'ArrowRight' && playerX < 280) {
+  if (direction === 'right' && playerX < 280) {
     playerX += 20;
     playerImg.style.left = `${playerX}px`;
   }
-});
+}
 
-// add touch listener for mobile users
-let touchStartX = null;
-let touchStartY = null;
+// add click/touch listeners for directional buttons
+document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
+document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
+document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
+document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
+document.getElementById('upButton').addEventListener('touchstart', () => movePlayer('up'));
+document.getElementById('downButton').addEventListener('touchstart', () => movePlayer('down'));
+document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
+document.getElementById('rightButton').addEventListener('touchstart', () => movePlayer('right'));
 
-document.addEventListener('touchstart', (event) => {
-  touchStartX = event.touches[0].clientX;
-  touchStartY = event.touches[0].clientY;
-});
-
-document.addEventListener('touchend', (event) => {
-  if (touchStartX === null || touchStartY === null) {
-    return;
+// add arrow key listener for desktop users
+document.addEventListener('keydown', (event) => {
+  switch (event.key) {
+    case 'ArrowUp':
+      movePlayer('up');
+      break;
+    case 'ArrowDown':
+      movePlayer('down');
+      break;
+    case 'ArrowLeft':
+      movePlayer('left');
+      break;
+    case 'ArrowRight':
+      movePlayer('right');
+      break;
+    default:
+      break;
   }
-
-  const touchEndX = event.changedTouches[0].clientX;
-  const touchEndY = event.changedTouches[0].clientY;
-
-  const dx = touchEndX - touchStartX;
-  const dy = touchEndY - touchStartY;
-
-  // determine direction of swipe
-  const absDx = Math.abs(dx);
-  const absDy = Math.abs(dy);
-
-  if (Math.max(absDx, absDy) > 10) {
-    if (absDx > absDy) {
-      // swipe left or right
-      if (dx < 0 && playerX > 0) {
-        playerX -= 20;
-        playerImg.style.left = `${playerX}px`;
-      } else if (dx > 0 && playerX < 280) {
-        playerX += 20;
-        playerImg.style.left = `${playerX}px`;
-      }
-    } else {
-      // swipe up or down
-      if (dy < 0 && playerY > 0) {
-        playerY -= 20;
-        playerImg.style.top = `${playerY}px`;
-      } else if (dy > 0 && playerY < 280) {
-        playerY += 20;
-        playerImg.style.top = `${playerY}px`;
-      }
-    }
-  }
-
-  // reset touch start position
-  touchStartX = null;
-  touchStartY = null;
-
-  event.preventDefault();
 });
 
 </script>
+
