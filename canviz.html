@@ -16,6 +16,11 @@
         left: 150;
         top: 150;
       }
+      #ring {
+          position: absolute;
+          left:30;
+          top: 30;
+      }
     </style>
   </head>
   <body>
@@ -24,6 +29,7 @@
     </div>
     <div id="field" style="margin: 0 auto;">
       <img id="player" src="" width="20" height="20">
+      <img id="ring" src="" width="20" height="20">
     </div>
     <div style="text-align:center">
         <div style="text-align:center">
@@ -37,6 +43,39 @@
 </html>
 
 <script>
+
+function randCoord() {
+  const min = 10;
+  const max = 270;
+  const increment = 20;
+  
+  const randomInt1 = Math.floor(Math.random() * ((max - min) / increment + 1)) * increment + min;
+  
+  let randomInt2 = Math.floor(Math.random() * ((max - min) / increment + 1)) * increment + min;
+  while (randomInt2 === randomInt1) {
+    randomInt2 = Math.floor(Math.random() * ((max - min) / increment + 1)) * increment + min;
+  }
+  
+  return [randomInt1, randomInt2];
+}
+
+function checkCoinCollide(){
+  console.log("checking collision...");
+  if (playerX == ringX && playerY == ringY){
+    //collision, relocate coin
+    console.log("collision!");
+    newCoords = randCoord();
+    ringX = newCoords[0];
+    ringY = newCoords[1];
+    ringImg.style.top = `${ringY}px`;
+    ringImg.style.left = `${ringX}px`;
+  }
+  else {
+    console.log("did not collide...");
+  }
+};
+
+
 // set the initial scale for mobile devices
 const viewportMeta = document.querySelector('meta[name="viewport"]');
 viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
@@ -50,6 +89,15 @@ let playerX = 150;
 let playerY = 150;
 playerImg.style.top = `${playerY}px`;
 playerImg.style.left = `${playerX}px`;
+
+//set up rings for player to pick up
+ringX = 90;
+ringY = 90;
+ringImg = document.getElementById('ring');
+ringImg.src="ring.png";
+ringImg.style.top = `${ringX}px`;
+ringImg.style.left = `${ringY}px`;
+
 
 // function to handle button clicks/touches
 function movePlayer(direction) {
@@ -107,9 +155,8 @@ document.addEventListener('keydown', (event) => {
       break;
     default:
       break;
-  }
+  };
+  checkCoinCollide();
 });
 
 </script>
-
-
