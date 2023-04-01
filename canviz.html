@@ -90,7 +90,7 @@ playerScore = 0;
 
 // set up player image
 const playerImg = document.getElementById('player');
-playerImg.src = "peckRight.jpg";//change to peckLeft.jpg when player go left
+playerImg.src = "peckRight.png";//change to peckLeft.jpg when player go left
 
 // set up player position and movement
 let playerX = 150;
@@ -124,14 +124,14 @@ function movePlayer(direction) {
   // move player left
   if (direction === 'left' && playerX > 10) {
     playerX -= 20;
-    playerImg.src = "peckLeft.jpg"
+    playerImg.src = "peckLeft.png"
     playerImg.style.left = `${playerX}px`;
   }
 
   // move player right
   if (direction === 'right' && playerX < 270) {
     playerX += 20;
-    playerImg.src = "peckRight.jpg";
+    playerImg.src = "peckRight.png";
     playerImg.style.left = `${playerX}px`;
   }
   checkCoinCollide();
@@ -164,8 +164,7 @@ document.addEventListener('keydown', (event) => {
       break;
     default:
       break;
-  };
-  //checkCoinCollide();
+  }; 
 });
 
 </script>
