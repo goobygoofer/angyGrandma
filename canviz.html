@@ -33,6 +33,7 @@
       <img id="ring" src="" width="20" height="20">
     </div>
     <div style="text-align:center">
+        <div id="score" style="text-align:center">Coins: 0</div>
         <div style="text-align:center">
         <button type="button" id="upButton">^</button>
         </div>
@@ -64,6 +65,8 @@ function checkCoinCollide(){
   console.log("checking collision...");
   if (playerX == ringX && playerY == ringY){
     //collision, relocate coin
+    playerScore+=1;
+    score.innerHTML=`Coins: ${playerScore}`;
     console.log("collision!");
     newCoords = randCoord();
     ringX = newCoords[0];
@@ -80,6 +83,10 @@ function checkCoinCollide(){
 // set the initial scale for mobile devices
 const viewportMeta = document.querySelector('meta[name="viewport"]');
 viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+
+//score
+score = document.getElementById('score');
+playerScore = 0;
 
 // set up player image
 const playerImg = document.getElementById('player');
@@ -127,6 +134,7 @@ function movePlayer(direction) {
     playerImg.src = "peckRight.jpg";
     playerImg.style.left = `${playerX}px`;
   }
+  checkCoinCollide();
 }
 
 // add click/touch listeners for directional buttons
@@ -157,7 +165,7 @@ document.addEventListener('keydown', (event) => {
     default:
       break;
   };
-  checkCoinCollide();
+  //checkCoinCollide();
 });
 
 </script>
