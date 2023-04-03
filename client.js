@@ -3,15 +3,62 @@ const ctx = canvas.getContext('2d');
 const spriteSheet = new Image();
 spriteSheet.src = 'spritesheet-0.5.18.png';
 
+
+
 BLOCKSIZE=16;
 
 baseTiles = {
-  "default":[0,0],
+  "default":[0,0],//plain, green grass
+  "snow":[208,528],
   "tree":[16,0],
+  "oak":[128,1104],
+  "deadtree":[48,464],
+  "snowtree":[176,544],
   "rock":[176,0],
   "water":[0,48],
-  "flower":[16,48]
+  "flower1":[16,48],
+  "flower2":[64,48],
+  "flower3":[112,48],
+  "mushroom":[80,256],
+  //paths
+  "pathHORIZ":[176,64],
+  "pathVERT":[192,64],
+  "pathTDWN":[208,64],
+  "pathTUP":[224,64],
+  "pathTRT":[240,64],
+  "pathTLT":[256,64],
+  "pathCRS":[272,64],
+  "pathCRV1":[288,64],
+  "pathCRV2":[304,64],
+  "pathCRV3":[288,80],
+  "pathCRV4":[304,80],
+  //stuff
+  "grave":[32,160],
+  "stoneblock":[288,0],
+  "woodblock":[304,0],
+  "stump1":[192,448],
+  "stump2":[64,1120],
+  "stump3":[80,1120],
+  "campfire":[32,384]
 }
+
+const dropdown = document.getElementById('tile-dropdown');
+console.log(dropdown)
+
+for (const key in baseTiles){
+  if (baseTiles.hasOwnProperty(key)){
+    const option = document.createElement("option");
+    option.text=key;
+    console.log(dropdown)
+    dropdown.append(option)
+  }
+}
+
+dropdown.addEventListener("change",function(){
+  const selectedTile = this.value;
+  console.log(selectedTile);
+  objectToPlace=selectedTile;
+})
 
 //set up ghost player
 ghostR = [48,80];//ghost facing right coords
