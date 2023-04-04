@@ -157,6 +157,7 @@ document.addEventListener('keydown', (event) => {
   if (event.target.nodeName==='SELECT'){
     return;
   }
+  event.preventDefault();
   switch (event.key) {
     case ' ':
       placeTile();
@@ -188,11 +189,11 @@ document.getElementById('downButton').addEventListener('mousedown', () => movePl
 document.getElementById('rightButton').addEventListener('mousedown', () => movePlayer('right'));
 document.getElementById('placeButton').addEventListener('mousedown', () => placeTile());
 
-document.getElementById('upButton').addEventListener('touchstart', () => movePlayer('up'));
-document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
-document.getElementById('downButton').addEventListener('touchstart', () => movePlayer('down'));
-document.getElementById('rightButton').addEventListener('touchstart', () => movePlayer('right'));
-document.getElementById('placeButton').addEventListener('touchstart', () => placeTile());
+document.getElementById('upButton').addEventListener('touchstart', (e) => {movePlayer('up');e.preventDefault();});
+document.getElementById('leftButton').addEventListener('touchstart', (e) => {movePlayer('left');e.preventDefault();});
+document.getElementById('downButton').addEventListener('touchstart', (e) => {movePlayer('down');e.preventDefault();});
+document.getElementById('rightButton').addEventListener('touchstart', (e) => {movePlayer('right');e.preventDefault();});
+document.getElementById('placeButton').addEventListener('touchstart', (e) => {placeTile();e.preventDefault();});
 
 function update(){
   ctx.clearRect(0,0,300,300);
