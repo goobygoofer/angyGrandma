@@ -182,11 +182,11 @@ document.addEventListener('keydown', (event) => {
   }; 
 });
 
-document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
-document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
-document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
-document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
-document.getElementById('placeButton').addEventListener('click', () => placeTile());
+document.getElementById('upButton').addEventListener('mousedown', () => movePlayer('up'));
+document.getElementById('leftButton').addEventListener('mousedown', () => movePlayer('left'));
+document.getElementById('downButton').addEventListener('mousedown', () => movePlayer('down'));
+document.getElementById('rightButton').addEventListener('mousedown', () => movePlayer('right'));
+document.getElementById('placeButton').addEventListener('mousedown', () => placeTile());
 
 document.getElementById('upButton').addEventListener('touchstart', () => movePlayer('up'));
 document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
