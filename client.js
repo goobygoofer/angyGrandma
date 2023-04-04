@@ -157,7 +157,7 @@ document.addEventListener('keydown', (event) => {
   if (event.target.nodeName==='SELECT'){
     return;
   }
-  event.preventDefault();
+  //event.preventDefault();
   switch (event.key) {
     case ' ':
       placeTile();
@@ -183,17 +183,17 @@ document.addEventListener('keydown', (event) => {
   }; 
 });
 
-document.getElementById('upButton').addEventListener('mousedown', () => movePlayer('up'));
-document.getElementById('leftButton').addEventListener('mousedown', () => movePlayer('left'));
-document.getElementById('downButton').addEventListener('mousedown', () => movePlayer('down'));
-document.getElementById('rightButton').addEventListener('mousedown', () => movePlayer('right'));
-document.getElementById('placeButton').addEventListener('mousedown', () => placeTile());
+document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
+document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
+document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
+document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
+document.getElementById('placeButton').addEventListener('click', () => placeTile());
 
-document.getElementById('upButton').addEventListener('touchstart', (e) => {movePlayer('up');e.preventDefault();});
-document.getElementById('leftButton').addEventListener('touchstart', (e) => {movePlayer('left');e.preventDefault();});
-document.getElementById('downButton').addEventListener('touchstart', (e) => {movePlayer('down');e.preventDefault();});
-document.getElementById('rightButton').addEventListener('touchstart', (e) => {movePlayer('right');e.preventDefault();});
-document.getElementById('placeButton').addEventListener('touchstart', (e) => {placeTile();e.preventDefault();});
+//document.getElementById('upButton').addEventListener('touchstart', (e) => {movePlayer('up');e.preventDefault();});
+//document.getElementById('leftButton').addEventListener('touchstart', (e) => {movePlayer('left');e.preventDefault();});
+//document.getElementById('downButton').addEventListener('touchstart', (e) => {movePlayer('down');e.preventDefault();});
+//document.getElementById('rightButton').addEventListener('touchstart', (e) => {movePlayer('right');e.preventDefault();});
+//document.getElementById('placeButton').addEventListener('touchstart', (e) => {placeTile();e.preventDefault();});
 
 function update(){
   ctx.clearRect(0,0,300,300);
