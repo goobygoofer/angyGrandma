@@ -189,11 +189,11 @@ document.getElementById('downButton').addEventListener('click', () => movePlayer
 document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
 document.getElementById('placeButton').addEventListener('click', () => placeTile());
 
-//document.getElementById('upButton').addEventListener('touchstart', () => {up_button.click();});
-//document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
-//document.getElementById('downButton').addEventListener('touchstart', () => movePlayer('down'));
-//document.getElementById('rightButton').addEventListener('touchstart', () => movePlayer('right'));
-//document.getElementById('placeButton').addEventListener('touchstart', () => placeTile());
+document.getElementById('upButton').addEventListener('touchstart', () => {up_button.click();});
+document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
+document.getElementById('downButton').addEventListener('touchstart', () => movePlayer('down'));
+document.getElementById('rightButton').addEventListener('touchstart', () => movePlayer('right'));
+document.getElementById('placeButton').addEventListener('touchstart', () => placeTile());
 
 function update(){
   ctx.clearRect(0,0,300,300);
