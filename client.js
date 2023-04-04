@@ -182,14 +182,13 @@ document.addEventListener('keydown', (event) => {
   }; 
 });
 
-up_button=document.getElementById('upButton');
-up_button.addEventListener('click', () => movePlayer('up'));
+document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
 document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
 document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
 document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
 document.getElementById('placeButton').addEventListener('click', () => placeTile());
 
-document.getElementById('upButton').addEventListener('touchstart', () => {up_button.click();});
+document.getElementById('upButton').addEventListener('touchstart', () => movePlayer('up'));
 document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
 document.getElementById('downButton').addEventListener('touchstart', () => movePlayer('down'));
 document.getElementById('rightButton').addEventListener('touchstart', () => movePlayer('right'));
