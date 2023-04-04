@@ -5,6 +5,10 @@ const sprtCtx = sprtCanvas.getContext('2d');
 const spriteSheet = new Image();
 spriteSheet.src = 'spritesheet-0.5.18.png';
 
+myData = localStorage.getItem("userMap");
+if (myData!==null){
+  tile_map=JSON.parse(myData);
+}
 
 
 BLOCKSIZE=16;
@@ -148,8 +152,13 @@ drawPlayer = function(direction){
 
 objectToPlace='rock'
 
+function saveToLocal(){
+  localStorage.setItem("userMap", JSON.stringify(tile_map))
+}
+
 function placeTile (){
   tile_map[playerX][playerY].objects.push(objectToPlace);
+  saveToLocal();
 }
 
 // add arrow key listener for desktop users
