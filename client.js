@@ -1,5 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const sprtCanvas = document.getElementById('spriteCanvas');
+const sprtCtx = sprtCanvas.getContext('2d');
 const spriteSheet = new Image();
 spriteSheet.src = 'spritesheet-0.5.18.png';
 
@@ -39,7 +41,8 @@ baseTiles = {
   "stump1":[192,448],
   "stump2":[64,1120],
   "stump3":[80,1120],
-  "campfire":[32,384]
+  "campfire":[32,384],
+
 }
 
 const dropdown = document.getElementById('tile-dropdown');
@@ -56,8 +59,11 @@ for (const key in baseTiles){
 
 dropdown.addEventListener("change",function(){
   const selectedTile = this.value;
-  console.log(selectedTile);
+  //console.log(selectedTile);
   objectToPlace=selectedTile;
+  sprtCtx.clearRect(0,0,16,16);
+  sprtCtx.drawImage(spriteSheet, baseTiles[selectedTile][0],baseTiles[selectedTile][1], 16,16,
+    0, 0, 16,16);
 })
 
 //set up ghost player
@@ -142,28 +148,52 @@ drawPlayer = function(direction){
 
 objectToPlace='rock'
 
+function placeTile (){
+  tile_map[playerX][playerY].objects.push(objectToPlace);
+}
+
 // add arrow key listener for desktop users
 document.addEventListener('keydown', (event) => {
+  if (event.target.nodeName==='SELECT'){
+    return;
+  }
   switch (event.key) {
     case ' ':
-      tile_map[playerX][playerY].objects.push(objectToPlace);
+      placeTile();
       break;
     case 'ArrowUp':
+    case 'w':
       movePlayer('up');
       break;
     case 'ArrowDown':
+    case 's':
       movePlayer('down');
       break;
     case 'ArrowLeft':
+    case 'a':
       movePlayer('left');
       break;
     case 'ArrowRight':
+    case 'd':
       movePlayer('right');
       break;
     default:
       break;
   }; 
 });
+
+up_button=document.getElementById('upButton');
+up_button.addEventListener('click', () => movePlayer('up'));
+document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
+document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
+document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
+document.getElementById('placeButton').addEventListener('click', () => placeTile());
+
+//document.getElementById('upButton').addEventListener('touchstart', () => {up_button.click();});
+//document.getElementById('leftButton').addEventListener('touchstart', () => movePlayer('left'));
+//document.getElementById('downButton').addEventListener('touchstart', () => movePlayer('down'));
+//document.getElementById('rightButton').addEventListener('touchstart', () => movePlayer('right'));
+//document.getElementById('placeButton').addEventListener('touchstart', () => placeTile());
 
 function update(){
   ctx.clearRect(0,0,300,300);
