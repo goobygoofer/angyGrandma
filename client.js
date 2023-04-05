@@ -201,7 +201,7 @@ function placeTile (objToPlace){
 }
 
 function resetTile(){
-  tile_map[playerX][playerY].objects=[];
+  tile_map[playerX][playerY]['objects']=[];
   tile_map[playerX][playerY]['sprite']=gameObjects['grass'];
 }
 
