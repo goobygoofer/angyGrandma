@@ -132,7 +132,7 @@ baseTiles = {//redo entirely and in order
     },
     "snow":{
         "name":"snow",
-        "sprite":baseTiles['water'],
+        "sprite":baseTiles['snow'],
         "type":"base-tile",
         "collision":false,
         "x":null,

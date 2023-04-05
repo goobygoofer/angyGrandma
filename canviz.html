@@ -11,15 +11,16 @@
     <canvas id="canvas" width="320" height="320"  style="display:block;margin:0 auto;"></canvas>
     <div style="display: flex; flex-direction: column; align-items: center;padding-bottom:10px;">
       <div style="display: flex; justify-content: center;">
-        <button id="upButton" style="padding:10px;">^</button>
+        <button id="upButton" style="padding:10px;"> ^ </button>
       </div>
       <div style="display: flex; justify-content: center;">
         <button id="leftButton" style="padding:10px;"><</button>
-        <button id="downButton" style="padding:10px;">v</button>
+        <button id="downButton" style="padding:10px;"> v </button>
         <button id="rightButton" style="padding:10px;">></button>
       </div>
       <div style="display: flex; justify-content: center;padding-top:10px">
         <button id="placeButton">place tile</button>
+        <button id="resetTileButton">clear tile</button>
       </div>
     </div>
     
@@ -28,7 +29,13 @@
         <option value="">Select a tile</option>
       </select>
       <canvas id="spriteCanvas" width="16" height="16"></canvas>
+    </div>
+    <div>
+      <button id="resetButton">Reset Map</button>
     </div> 
+    <div>
+      <button id="collisionButton">toggle</br>collision</button>
+    </div>
     <script src="./tile_map.js" type="text/javascript"></script>
     <script src="./base_tiles.js" type="text/javascript"></script>
     <script src="./client.js" type="text/javascript"></script>

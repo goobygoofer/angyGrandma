@@ -1,5 +1,12 @@
 //debug stuffs
 var master_collision = false
+function toggleCollision(){
+  if (master_collision===false){
+    master_collision=true;
+  } else {
+    master_collision=false;
+  }
+}
 
 //UI setup////////////////////////////////////////////////////////////////////////////
 //main canvas element
@@ -85,6 +92,9 @@ document.getElementById('leftButton').addEventListener('click', () => movePlayer
 document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
 document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
 document.getElementById('placeButton').addEventListener('click', () => placeTile(objectToPlace));
+document.getElementById('resetButton').addEventListener('click', () => clearUserMap());
+document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
+document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
@@ -188,6 +198,11 @@ function placeTile (objToPlace){
     tile_map[playerX][playerY]['sprite']=objectToPlace;
   }
   saveToLocal();
+}
+
+function resetTile(){
+  tile_map[playerX][playerY].objects=[];
+  tile_map[playerX][playerY]['sprite']=gameObjects['grass'];
 }
 
 //end player setup////////////////////////////////////////////////////////////////////
