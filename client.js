@@ -265,16 +265,17 @@ function filterObjByKeyVal(arr, key, val){
 }
 
 var npcs=[];//npc's in game, {"[id]":npc_object}
-function skeleton(){
+function Skeleton(){
   //going to need id eventually?
-  this.spriteData=gameObjects['skeleton'];
-  this.spriteData.id='1234';//just testing, figure out way to generate
+  this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
+  this.spriteData.id=null;
   this.x=null;//don't need these because in spriteData?
   this.y=null;
   this.lastTime=Date.now();//timestamp
   this.update = function(){
     let now = Date.now();
-    if (now > this.lastTime+2000){
+    let restTime = Math.floor(Math.random()*3000)
+    if (now > this.lastTime+restTime){
       this.lastTime=now;
       let newCoords=moveNPC(this.x,this.y);//returns x,y
       //remove self from current tile
@@ -289,13 +290,36 @@ function skeleton(){
     }
   }
 }
-//skeleton testing
-var skeleton_1 = new skeleton();
-skeleton_1.x=17;
-skeleton_1.y=17;
-tile_map[skeleton_1.x][skeleton_1.y].objects.push(skeleton_1.spriteData);
-npcs.push(skeleton_1);
-//npcs[skeleton_1.id]=skeleton_1;
+
+//generate npcs
+for (i=0;i<100;i++){
+  npcs.push(new Skeleton);
+}
+//id testing
+game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
+for (npc in npcs){
+  id_ok = false;
+  let npcid=null;
+  while (id_ok==false){
+    npcid = Math.floor(Math.random()*1000);
+    console.log(npcid);
+    let indexCheck = game_ids.indexOf(npcid) !== -1;
+    if (indexCheck===true){
+      game_ids.push(npcid);
+      id_ok=true;
+    }
+  }
+  npcs[npc].x=Math.floor(Math.random()*80);
+  npcs[npc].y=Math.floor(Math.random()*80);
+  if (npcs[npc].x<=10){
+    npcs[npc].x=11;
+  }
+  if (npcs[npc].y<=10){
+    npcs[npc].y=11;
+  }
+  tile_map[npcs[npc].x][npcs[npc].y].objects.push(npcs[npc].spriteData);
+}
+
 
 //main
 function drawWeather(x,y){
