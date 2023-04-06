@@ -153,19 +153,32 @@ function interactNext(nextX, nextY){
 }
 
 function checkCollision(nextX, nextY){
-  if (tile_map[nextX][nextY]['sprite']['collision']===true){
-    return true
-  } else {
-    //check objects on tile for collision
-    if (tile_map[nextX][nextY]['objects'].length===0){
-      return false
-    }
-    for (object in tile_map[nextX][nextY]['objects']){
-      if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
-        return true
-      }
+  for (object in tile_map[nextX][nextY]['objects']){
+    if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
+      return true
     }
   }
+  console.log("checking base collision or override");
+  if (tile_map[nextX][nextY]['sprite']['collision']===true){
+    console.log("collision on base tile, now check override...");
+    let collide_override=false;
+    for (object in tile_map[nextX][nextY]['objects']){
+      if (tile_map[nextX][nextY]['objects'][object].hasOwnProperty("coll_override")===true){
+        console.log('checking if coll_override is true')
+        if (tile_map[nextX][nextY]['objects'][object]['coll_override']===true){
+          collide_override = true;
+        }
+      }
+    }
+    console.log(collide_override);
+    if (collide_override===true){
+      console.log("collide override");
+      return false;
+    } else{
+      console.log("no collide override")
+      return true;
+    }
+  } 
 }
 
 //instead check players next potential tile in tile_map
@@ -292,7 +305,7 @@ function Skeleton(){
 }
 
 //generate npcs
-for (i=0;i<100;i++){
+for (i=0;i<25;i++){
   npcs.push(new Skeleton);
 }
 //id testing
@@ -320,7 +333,6 @@ for (npc in npcs){
   tile_map[npcs[npc].x][npcs[npc].y].objects.push(npcs[npc].spriteData);
 }
 
-
 //main
 function drawWeather(x,y){
   //for now just draw rain on random tiles
@@ -334,8 +346,8 @@ function drawWeather(x,y){
 }
 
 const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
-gradient.addColorStop(0, "transparent");
-gradient.addColorStop(1, "gray");
+gradient.addColorStop(0,"transparent");
+gradient.addColorStop(1, "DarkGray");
 
 function drawMap(disp_area){
   for (row in disp_area){

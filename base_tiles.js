@@ -1,5 +1,6 @@
 baseTiles = {//redo entirely and in order
     "grass":[0,0],//plain, green grass
+    "grass2":[160,608],
     "snow":[208,528],//
     "tree":[16,0],//
     "oak":[128,1104],//
@@ -26,12 +27,22 @@ baseTiles = {//redo entirely and in order
     //stuff
     "grave":[32,160],//
     "stoneblock":[288,0],//
-    "woodblock":[304,0],//
+    "woodblock":[112,0],//
     "stump1":[192,448],
     "stump2":[64,1120],
     "stump3":[80,1120],
     "campfire":[32,384],//
     "rain":[144,432],//
+    "fenceV":[0,160],
+    "fenceH":[16,160],
+    "sand":[16,64],
+    "boulder":[144,1232],
+    "rockpile":[304,1072],
+    "mapsign":[16,176],
+    "bed":[128,112],
+    "cactus":[160,48],
+    "ankh":[128,96],
+    "chest":[32,128]
   }
 
   npcTiles = {
@@ -48,6 +59,72 @@ baseTiles = {//redo entirely and in order
         "facing":"left",//players and npcs need this
         "type":"npc",
         "collision":true
+    },
+    "chest":{
+        "name":"chest",
+        "sprite":baseTiles['chest'],
+        "type":"object",
+        "collision":true//not sure bout this one
+    },
+    "ankh":{
+        "name":"ankh",
+        "sprite":baseTiles['ankh'],
+        "type":"object",
+        "collision":true
+    },
+    "cactus":{
+        "name":"cactus",
+        "sprite":baseTiles['cactus'],
+        "type":"object",
+        "collision":true
+    },
+    "bed":{
+        "name":"bed",
+        "sprite":baseTiles['bed'],
+        "type":"object",
+        "collision":false
+    },
+    "mapsign":{
+        "name":"mapsign",
+        "sprite":baseTiles['mapsign'],
+        "type":"object",
+        "collision":true
+    },
+    "rockpile":{
+        "name":"rockpile",
+        "sprite":baseTiles['rockpile'],
+        "type":"object",
+        "collision":true
+    },
+    "boulder":{
+        "name":"boulder",
+        "sprite":baseTiles['boulder'],
+        "type":"object",
+        "collision":true
+    },
+    "sand":{
+        "name":"sand",
+        "sprite":baseTiles['sand'],
+        "type":"base-tile",
+        "collision":false
+    },
+    "fenceV":{
+        "name":"fenceV",
+        "sprite":baseTiles['fenceV'],
+        "type":"object",
+        "collision":true
+    },
+    "fenceH":{
+        "name":"fenceH",
+        "sprite":baseTiles['fenceH'],
+        "type":"object",
+        "collision":true
+    },
+    "grass2":{
+        "name":"grass2",
+        "sprite":baseTiles['grass2'],
+        "type":"object",
+        "collision":false
     },
     "rain":{//this is also the speedboot trail sprite
         "name":"rain",
@@ -100,7 +177,7 @@ baseTiles = {//redo entirely and in order
     "rock":{
         "name":"rock",//won't be any issues with this? will probably need id and stuff eventually
         "sprite":baseTiles['rock'],//object['sprite'][0]/[1] are sprite coords
-        "type":"object",//as opposed to player or base-tile
+        "type":"base-tile",//as opposed to player or base-tile
         "collision":true,
     },
     "grass":{
@@ -172,67 +249,78 @@ baseTiles = {//redo entirely and in order
     "pathHORIZ":{
         "name":"pathHORIZ",
         "sprite":baseTiles['pathHORIZ'],
-        "type":"object",//ok so more than one object per tile?
+        "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathVERT":{
         "name":"pathVERT",
         "sprite":baseTiles['pathVERT'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathTDWN":{
         "name":"pathTDWN",
         "sprite":baseTiles['pathTDWN'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathTUP":{
         "name":"pathTUP",
         "sprite":baseTiles['pathTUP'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathTRT":{
         "name":"pathTRT",
         "sprite":baseTiles['pathTRT'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathTLT":{
         "name":"pathTLT",
         "sprite":baseTiles['pathTLT'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathCRS":{
         "name":"pathCRS",
         "sprite":baseTiles['pathCRS'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathCRV1":{
         "name":"pathCRV1",
         "sprite":baseTiles['pathCRV1'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathCRV2":{
         "name":"pathCRV2",
         "sprite":baseTiles['pathCRV2'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathCRV3":{
         "name":"pathCRV3",
         "sprite":baseTiles['pathCRV3'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     },
     "pathCRV4":{
         "name":"pathCRV4",
         "sprite":baseTiles['pathCRV4'],
         "type":"object",
         "collision":false,
+        "coll_override":true
     }
 }
