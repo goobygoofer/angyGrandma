@@ -16,6 +16,28 @@ function toggleRain(){
   }
 }
 
+var showStats = false;
+function toggleStats(){
+  if (showStats===true){
+    showStats=false;
+  } else{
+    showStats=true;
+  }
+}
+
+function drawStats(){
+  if (!showStats){return;};
+  ctx.fillStyle="white";
+  ctx.fillText("walking xp: " + player.skills.walking.xp, 0,250);
+  ctx.fillText("strength xp: " + player.skills.strength.xp, 0, 260);
+}
+
+//sound stuff//////////////////////////////////////////////////////////////////////////
+
+const skele_die_sound = new Audio('skele_die.mp3');
+
+//end sound stuff//////////////////////////////////////////////////////////////////////
+
 //UI setup////////////////////////////////////////////////////////////////////////////
 //main canvas element
 const canvas = document.getElementById('canvas');
@@ -32,21 +54,8 @@ BLOCKSIZE=16;//maybe not need this or shorten var name
 //get user previous map from local storage
 var myData = localStorage.getItem("userMap");
 if (myData!==null){
-  tile_map=JSON.parse(myData);
-}
-//save map to local storage
-function saveToLocal(){//now only runs if player clicks button
-  for (row in tile_map){
-    for (col in tile_map[row]){
-      tile_map[row][col].objects=filterObjByKeyVal(tile_map[row][col].objects, "type", "npc");
-    }
-  }
-  localStorage.setItem("userMap", JSON.stringify(tile_map))
-}
-//delete map from local storage
-function clearUserMap (){
-  delete localStorage['userMap'];
-  console.log("refresh to clear, place another tile before refreshing to cancel")
+  tile_map=JSON.parse(myData);//otherwise tile_map is just default from file
+  myData=null;//otherwise you've got 2 tile maps? 
 }
 
 //setup dropdown menu for base tiles
@@ -111,9 +120,35 @@ document.getElementById('saveButton').addEventListener('click', () => saveToLoca
 document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
 document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
+document.getElementById('statsButton').addEventListener('click', () => toggleStats());
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
+function Player(){
+  this.skills = {
+    "walking":{"xp":0,"lvl":1},
+    "strength":{"xp":0,"lvl":1}
+  };
+  this.inventory = [];
+  this.incrementSkill = function(skill, amount){
+    this.skills[skill].xp+=amount;
+    localStorage['playerStats']=JSON.stringify(this.skills);
+    //then check if skill leveled up
+  }
+  this.attack = function(target){
+    target.getAttacked(this.skills.strength.lvl);
+  }
+}
+
+let player = new Player();
+
+//get user stats from local storage
+var playerStats = localStorage.getItem("playerStats");
+if (playerStats!==null){
+  player.skills=JSON.parse(playerStats);
+  playerStats=null;
+}
+
 ghostR = [48,80];//ghost facing right coords
 ghostL = [64,96];//ghost facing left coords
 ghostFacing='rt';
@@ -144,41 +179,27 @@ function getDispArea(){
   return dispList;
 }
 //player interact with next tile
+function interactNPC(nextX, nextY){
+  for (object in tile_map[nextX][nextY].objects){
+    if (tile_map[nextX][nextY].objects[object].type=="npc"){
+      targetNPC=getNpcById(tile_map[nextX][nextY].objects);
+      targetNPC=targetNPC[0].id;
+      targetNPC=filterNpcById(npcs, targetNPC)[0];
+      if (targetNPC.spriteData.attackable===true){
+        player.attack(targetNPC);//hmmm?
+      }
+    }
+  }
+}
+
 function interactNext(nextX, nextY){
   if (master_collision===true){
     return false
   }
+  //check for hostile npcs on next tile
+  interactNPC(nextX, nextY);//maybe do this way so there is hierarchy of interaction?
   check_collision=checkCollision(nextX, nextY);
   return check_collision;
-}
-
-function checkCollision(nextX, nextY){
-  for (object in tile_map[nextX][nextY]['objects']){
-    if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
-      return true
-    }
-  }
-  console.log("checking base collision or override");
-  if (tile_map[nextX][nextY]['sprite']['collision']===true){
-    console.log("collision on base tile, now check override...");
-    let collide_override=false;
-    for (object in tile_map[nextX][nextY]['objects']){
-      if (tile_map[nextX][nextY]['objects'][object].hasOwnProperty("coll_override")===true){
-        console.log('checking if coll_override is true')
-        if (tile_map[nextX][nextY]['objects'][object]['coll_override']===true){
-          collide_override = true;
-        }
-      }
-    }
-    console.log(collide_override);
-    if (collide_override===true){
-      console.log("collide override");
-      return false;
-    } else{
-      console.log("no collide override")
-      return true;
-    }
-  } 
 }
 
 //instead check players next potential tile in tile_map
@@ -209,7 +230,10 @@ function movePlayer(direction) {
     ghostFacing='rt';
   }
   let collision=interactNext(potentialX, potentialY);//player interacts with objects on potential tile, returns true if collide
-  if (collision===true){return};
+  if (collision===true){return;};
+  if (potentialX!==playerX || potentialY!==playerY){
+    player.incrementSkill("walking", 1);
+  }
   playerX=potentialX;
   playerY=potentialY;
 }
@@ -223,7 +247,7 @@ drawPlayer = function(){
         drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16,16);
 }
 
-objectToPlace=gameObjects['rock'];
+var objectToPlace=gameObjects['rock'];
 
 function placeTile (objToPlace){
   if (objToPlace.type==='object'){
@@ -232,7 +256,7 @@ function placeTile (objToPlace){
   if (objToPlace.type==='base-tile'){
     tile_map[playerX][playerY]['sprite']=objectToPlace;
   }
-  //saveToLocal();//make button for this
+  //saveToLocal();//uncomment to save every time you place a tile
 }
 
 function resetTile(){
@@ -240,9 +264,81 @@ function resetTile(){
   tile_map[playerX][playerY]['sprite']=gameObjects['grass'];
 }
 
-//end player setup////////////////////////////////////////////////////////////////////
+//end player setup///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//passive npc setup testing
+//utility functions//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//save map to local storage
+function saveToLocal(){//now only runs if player clicks button
+  for (row in tile_map){
+    for (col in tile_map[row]){
+      tile_map[row][col].objects=filterObjByKeyVal(tile_map[row][col].objects, "type", "npc");
+    }
+  }
+  localStorage.setItem("userMap", JSON.stringify(tile_map))
+}
+
+//delete map from local storage
+function clearUserMap (){
+  delete localStorage['userMap'];
+  console.log("refresh to clear, place another tile before refreshing to cancel")
+}
+
+//pretty obvious function. works for player and npcs (so far)
+function checkCollision(nextX, nextY){
+  for (object in tile_map[nextX][nextY]['objects']){
+    if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
+      return true
+    }
+  }
+  if (tile_map[nextX][nextY]['sprite']['collision']===true){
+    let collide_override=false;
+    for (object in tile_map[nextX][nextY]['objects']){
+      if (tile_map[nextX][nextY]['objects'][object].hasOwnProperty("coll_override")===true){
+        if (tile_map[nextX][nextY]['objects'][object]['coll_override']===true){
+          collide_override = true;
+        }
+      }
+    }
+    if (collide_override===true){
+      return false;
+    } else{
+      return true;
+    }
+  } 
+}
+
+//holy sweet jesus christ have to get rid of some of these...
+function hasFunction(obj, functionName){
+  return obj && obj.hasOwnProperty(functionName) && typeof obj[functionName] ==='function';
+}
+
+function filterObjById(arr, id){//returns list minus any object.id = id  //
+  return arr.filter(obj => !obj.hasOwnProperty('id') && obj.id !==id);
+}
+
+function getObjById(arr, npcid){//
+  return arr.filter(obj => obj.hasOwnProperty(npcid) && obj.id!==npcid)
+}
+
+function getNpcById(arr, id){//does opposite of filterObjById, returns only npc with id
+  return arr.filter(obj => obj.hasOwnProperty('id') && obj.id!==id);
+}
+
+function filterNpcById(arr, id){
+  return arr.filter(obj => obj.hasOwnProperty('id') && obj.id===id);
+}
+
+function filterObjByKeyVal(arr, key, val){//returns list minus all objects with key that equals val
+  return arr.filter(obj => obj.hasOwnProperty(key) && obj[key] !== val);
+}
+
+function removeItemById(list, id){
+  return list.filter(item => item.id !== id);
+}
+//end utility functions///////////////////////////////////////////////////////////////////////////////////////////////
+
+//passive npc setup testing///////////////////////////////////////////////////////////////////////////////////////////
 move_dir=["up","down","left","right"];
 
 function moveNPC(curX,curY){//for passive (non-aggressive/tracking) movement
@@ -269,23 +365,27 @@ function moveNPC(curX,curY){//for passive (non-aggressive/tracking) movement
   }
 }
 
-function filterObjById(arr, id){//returns list with id del'd
-  return arr.filter(obj => !obj.hasOwnProperty('id') && obj.id !==id);
-}
-
-function filterObjByKeyVal(arr, key, val){
-  return arr.filter(obj => obj.hasOwnProperty(key) && obj[key] !== val);
+function removeNPC(id, x, y){
+  tile_map[x][y].objects=filterObjById(tile_map[x][y].objects, id);
+  npcs=removeItemById(npcs, id)
+  //console.log("npcs list now: " + npcs)
 }
 
 var npcs=[];//npc's in game, {"[id]":npc_object}
 function Skeleton(){
-  //going to need id eventually?
+  this.hp = 1;//lel just testing
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
   this.spriteData.id=null;
   this.x=null;//don't need these because in spriteData?
   this.y=null;
   this.lastTime=Date.now();//timestamp
   this.update = function(){
+    if (this.hp<1){
+      //skeleton dies
+      //remove sprite from tile, remove npc from npcs
+      skele_die_sound.play();
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
     let now = Date.now();
     let restTime = Math.floor(Math.random()*3000)
     if (now > this.lastTime+restTime){
@@ -302,6 +402,11 @@ function Skeleton(){
       tile_map[this.x][this.y].objects.push(this.spriteData)
     }
   }
+  this.getAttacked = function(damage){
+    //receive attack from player
+    this.hp-=damage;
+    player.skills.strength.xp+=1;
+  }
 }
 
 //generate npcs
@@ -313,12 +418,14 @@ game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id fr
 for (npc in npcs){
   id_ok = false;
   let npcid=null;
-  while (id_ok==false){
+  while (id_ok===false){
     npcid = Math.floor(Math.random()*1000);
-    console.log(npcid);
+    //console.log(npcid);
     let indexCheck = game_ids.indexOf(npcid) !== -1;
-    if (indexCheck===true){
+    if (indexCheck===false){
       game_ids.push(npcid);
+      npcs[npc].spriteData.id=npcid;
+      npcs[npc].id=npcid;
       id_ok=true;
     }
   }
@@ -332,8 +439,10 @@ for (npc in npcs){
   }
   tile_map[npcs[npc].x][npcs[npc].y].objects.push(npcs[npc].spriteData);
 }
+//end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
 
-//main
+
+//main///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function drawWeather(x,y){
   //for now just draw rain on random tiles
   if (raining===true){
@@ -390,7 +499,9 @@ function drawMap(disp_area){
 function updateNPCs(){
   //for npc in npcs, npcs[npc].update();
   for (npc in npcs){
-    npcs[npc].update();
+    if (hasFunction(npcs[npc], 'update')){
+      npcs[npc].update();
+    }
   }
 }
 
@@ -402,6 +513,7 @@ function update(){
   updateNPCs();
   drawMap(disp_area);
   drawPlayer();//or draw player as object of tile they are on?
+  drawStats();
 }
 
 setInterval(update,100);//or update only when user moves or places a tile, need to add modes

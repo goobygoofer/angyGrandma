@@ -47,7 +47,9 @@ baseTiles = {//redo entirely and in order
 
   npcTiles = {
     "skelR":[128,16],
-    "skelL":[128,32]
+    "skelL":[128,32],
+    "ghostR":[48,80],//ghost facing right coords
+    "ghostL":[64,96]//ghost facing left coords
   }
 
   gameObjects = {
@@ -58,7 +60,8 @@ baseTiles = {//redo entirely and in order
         "sprite":{"left":npcTiles['skelR'],"right":npcTiles['skelL']},
         "facing":"left",//players and npcs need this
         "type":"npc",
-        "collision":true
+        "collision":true,
+        "attackable":true
     },
     "chest":{
         "name":"chest",
