@@ -42,7 +42,22 @@ baseTiles = {//redo entirely and in order
     "bed":[128,112],
     "cactus":[160,48],
     "ankh":[128,96],
-    "chest":[32,128]
+    "chest":[32,128],
+    "woodplate":[112,80],
+    "stoneplate":[128,80],
+    "door":[288,96],
+    "door2":[192,816],
+    "door3":[32,848],
+    "skull":[304,1024],
+    "table":[64,352],
+    "chair":[80,352],
+    "sign":[80,512],
+    "deskHORIZ":[112,128],
+    "deskVERT":[0,144],
+    "deskCRV1":[16,144],
+    "deskCRV2":[32,144],
+    "deskCRV3":[96,1264],
+    "deskCRV4":[112,1264]
   }
 
   npcTiles = {
@@ -62,6 +77,96 @@ baseTiles = {//redo entirely and in order
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "deskHORIZ":{
+        "name":"deskHORIZ",
+        "sprite":baseTiles['deskHORIZ'],
+        "type":"object",
+        "collision":true
+    },
+    "deskVERT":{
+        "name":"deskVERT",
+        "sprite":baseTiles['deskVERT'],
+        "type":"object",
+        "collision":true
+    },
+    "deskCRV1":{
+        "name":"deskCRV1",
+        "sprite":baseTiles['deskCRV1'],
+        "type":"object",
+        "collision":true
+    },
+    "deskCRV2":{
+        "name":"deskCRV2",
+        "sprite":baseTiles['deskCRV2'],
+        "type":"object",
+        "collision":true
+    },
+    "deskCRV3":{
+        "name":"deskCRV3",
+        "sprite":baseTiles['deskCRV3'],
+        "type":"object",
+        "collision":true
+    },
+    "deskCRV4":{
+        "name":"deskCRV4",
+        "sprite":baseTiles['deskCRV4'],
+        "type":"object",
+        "collision":true
+    },
+    "sign":{
+        "name":"sign",
+        "sprite":baseTiles['sign'],
+        "type":"object",
+        "collision":true
+    },
+    "chair":{
+        "name":"chair",
+        "sprite":baseTiles['chair'],
+        "type":"object",
+        "collision":false
+    },
+    "table":{
+        "name":"table",
+        "sprite":baseTiles['table'],
+        "type":"object",
+        "collision":true
+    },
+    "skull":{
+        "name":"skull",
+        "sprite":baseTiles['skull'],
+        "type":"object",
+        "collision":false
+    },
+    "door":{
+        "name":"door",
+        "sprite":baseTiles['door'],
+        "type":"object",
+        "collision":true//change if user try to walk into it and has key?
+    },
+    "door2":{
+        "name":"door2",
+        "sprite":baseTiles['door2'],
+        "type":"object",
+        "collision":true
+    },
+    "door3":{
+        "name":"door3",
+        "sprite":baseTiles['door3'],
+        "type":"object",
+        "collision":true
+    },
+    "woodplate":{
+        "name":"woodplate",
+        "sprite":baseTiles['woodplate'],
+        "type":"object",
+        "collision":false
+    },
+    "stoneplate":{
+        "name":"stoneplate",
+        "sprite":baseTiles['stoneplate'],
+        "type":"object",
+        "collision":false
     },
     "chest":{
         "name":"chest",
