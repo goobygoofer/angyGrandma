@@ -16,7 +16,7 @@ function toggleRain(){
   }
 }
 
-var showStats = false;
+var showStats = true;
 function toggleStats(){
   if (showStats===true){
     showStats=false;
@@ -317,10 +317,6 @@ function filterObjById(arr, id){//returns list minus any object.id = id  //
   return arr.filter(obj => !obj.hasOwnProperty('id') && obj.id !==id);
 }
 
-function getObjById(arr, npcid){//
-  return arr.filter(obj => obj.hasOwnProperty(npcid) && obj.id!==npcid)
-}
-
 function getNpcById(arr, id){//does opposite of filterObjById, returns only npc with id
   return arr.filter(obj => obj.hasOwnProperty('id') && obj.id!==id);
 }
@@ -336,6 +332,16 @@ function filterObjByKeyVal(arr, key, val){//returns list minus all objects with 
 function removeItemById(list, id){
   return list.filter(item => item.id !== id);
 }
+
+function isObjectInList(list, npcid){
+  for (let i=0;i<list.length;i++){
+    if (list[i].id === npcid){
+      return true
+    }
+  }
+  return false;
+}
+//if you're wondering why the fuck all these are here, I am too XD
 //end utility functions///////////////////////////////////////////////////////////////////////////////////////////////
 
 //passive npc setup testing///////////////////////////////////////////////////////////////////////////////////////////
@@ -376,7 +382,7 @@ function Skeleton(){
   this.hp = 1;//lel just testing
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
   this.spriteData.id=null;
-  this.x=null;//don't need these because in spriteData?
+  this.x=null;
   this.y=null;
   this.lastTime=Date.now();//timestamp
   this.update = function(){
@@ -481,10 +487,17 @@ function drawMap(disp_area){
           }
           //draw npcs
           else if (tile_map[sprtX][sprtY]['objects'][object].type==='npc'){
-            let npcFacing=tile_map[sprtX][sprtY]['objects'][object].facing;
-            sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite'][npcFacing];
-            ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
-              col*BLOCKSIZE, row*BLOCKSIZE, 16,16);
+            let npcid=tile_map[sprtX][sprtY]['objects'][object].id;
+            if (isObjectInList(npcs, npcid)){
+              let npcFacing=tile_map[sprtX][sprtY]['objects'][object].facing;
+              sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite'][npcFacing];
+              ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
+                col*BLOCKSIZE, row*BLOCKSIZE, 16,16);
+            } else {
+              //remove the objectless sprite!
+              delete tile_map[sprtX][sprtY]['objects'][object];
+            }
+            
           }
         }
       }
