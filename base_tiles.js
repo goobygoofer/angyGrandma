@@ -57,7 +57,8 @@ baseTiles = {//redo entirely and in order
     "deskCRV1":[16,144],
     "deskCRV2":[32,144],
     "deskCRV3":[96,1264],
-    "deskCRV4":[112,1264]
+    "deskCRV4":[112,1264],
+    "redX":[288,751]//this one was weird
   }
 
   npcTiles = {
@@ -77,6 +78,12 @@ baseTiles = {//redo entirely and in order
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "redX":{
+        "name":"redX",
+        "sprite":baseTiles["redX"],
+        "type":"object",
+        "collision":false
     },
     "deskHORIZ":{
         "name":"deskHORIZ",
@@ -196,7 +203,8 @@ baseTiles = {//redo entirely and in order
         "name":"mapsign",
         "sprite":baseTiles['mapsign'],
         "type":"object",
-        "collision":true
+        "collision":true,
+        "id":null
     },
     "rockpile":{
         "name":"rockpile",

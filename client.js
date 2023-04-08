@@ -25,6 +25,20 @@ function toggleStats(){
   }
 }
 
+var bigMap = false;
+var DRAWSIZE = 16;
+function toggleMap(){
+  if (bigMap===true){
+    BLOCKSIZE = 16;
+    DRAWSIZE = 16;
+    bigMap=false;
+  } else{
+    BLOCKSIZE = 3;
+    DRAWSIZE = 3;
+    bigMap=true;
+  }
+}
+
 function drawStats(){
   if (!showStats){return;};
   ctx.fillStyle="white";
@@ -32,6 +46,17 @@ function drawStats(){
   ctx.fillText("strength xp: " + player.skills.strength.xp, 0, 260);
 }
 
+var game_object_ids = [];
+var game_objects = [];//maybe npc and object ids all go in game_obj_ids, but npcs and game_objects still separate? idk
+function mapSign(){
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['mapsign']));
+  this.spriteData.id=generateID();
+  game_object_ids.push(this.spriteData.id);
+  this.playerInteract=function(){
+    toggleMap();
+  }
+}//the fact that any map sprite you place works is probably going to be a bug later on... heheh
+game_objects.push(new mapSign());
 //sound stuff//////////////////////////////////////////////////////////////////////////
 
 const skele_die_sound = new Audio('skele_die.mp3');
@@ -121,6 +146,31 @@ document.getElementById('resetTileButton').addEventListener('click', () => reset
 document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 document.getElementById('statsButton').addEventListener('click', () => toggleStats());
+
+function isTopLeftClicked(event, canvas){
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x < 25 && y < 25;
+}
+
+canvas.addEventListener('click', event => {
+  if (isTopLeftClicked(event, canvas)){
+    if (bigMap){
+      toggleMap();
+    }
+    console.log("clicked top left corner");
+  }
+});
+
+canvas.addEventListener('touchend', event => {
+  if (isTopLeftClicked(event.touches[0], canvas)){
+    if (bigMap){
+      toggleMap();
+    }
+    console.log("user touched top left corner");
+  }
+});
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
@@ -187,9 +237,23 @@ function interactNPC(nextX, nextY){
       targetNPC=filterNpcById(npcs, targetNPC)[0];
       if (targetNPC.spriteData.attackable===true){
         player.attack(targetNPC);//hmmm?
+        //return? also should probably make interactObject not run so return false
       }
     }
   }
+}
+
+function interactObject(nextX, nextY){
+  for (object in tile_map[nextX][nextY].objects){
+    if (tile_map[nextX][nextY].objects[object].type==="object"){
+      let npcid = tile_map[nextX][nextY].objects[object].id//[0].id;
+      targetNPC=filterObjById(game_objects, npcid)[0];
+      if (hasFunction(targetNPC, "playerInteract")){
+        targetNPC.playerInteract();
+      }
+    }
+  }
+
 }
 
 function interactNext(nextX, nextY){
@@ -198,6 +262,7 @@ function interactNext(nextX, nextY){
   }
   //check for hostile npcs on next tile
   interactNPC(nextX, nextY);//maybe do this way so there is hierarchy of interaction?
+  interactObject(nextX, nextY);
   check_collision=checkCollision(nextX, nextY);
   return check_collision;
 }
@@ -420,6 +485,19 @@ for (i=0;i<25;i++){
   npcs.push(new Skeleton);
 }
 //id testing
+function generateID(){//this is not best practice, just for testing. max of 1000 objects
+  //returns id if not in list
+  id_ok = false;
+  let npcid=null;
+  while (id_ok===false){//this has the potential to hang when too many objects
+    npcid = Date.now()
+    //console.log(npcid);
+    let indexCheck = game_object_ids.indexOf(npcid) !== -1;
+    if (indexCheck===false){
+      return npcid
+    }
+  }
+}
 game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
 for (npc in npcs){
   id_ok = false;
@@ -464,17 +542,39 @@ const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, c
 gradient.addColorStop(0,"transparent");
 gradient.addColorStop(1, "DarkGray");
 
+
+//add mapsign as an object
+//if player walks into map, interact next tile interacts with map object
+//player walks away, map goes away
+//need mini map (togglable)
+function drawBigMap(){
+  //draw all tiles except 1/16 size? will have to see how it works out
+  dispList=[]
+  for (i=0;i<100;i++){
+    innerList=[]
+    for (j=0;j<100;j++){
+      innerList.push([j,i]);
+    }
+    dispList.push(innerList);
+  }
+  return dispList;
+
+}
+
 function drawMap(disp_area){
   for (row in disp_area){
     //draw base sprite from that area of tile_map
     for (col in disp_area[row]){
       let sprtX=disp_area[row][col][0];
       let sprtY=disp_area[row][col][1];
+      //console.log("[" + sprtX + ", " + sprtY + "]");
       let sprtLoc=gameObjects[tile_map[sprtX][sprtY]['sprite']['name']]['sprite']
       ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
-        col*BLOCKSIZE, row*BLOCKSIZE, 16,16);
+        col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
       //draw weather
-      drawWeather(col*BLOCKSIZE,row*BLOCKSIZE);
+      if (!bigMap){
+        drawWeather(col*BLOCKSIZE,row*BLOCKSIZE);
+      }
       //drawNPCs(disp_area);//function to draw npcs in player view
       if (tile_map[sprtX][sprtY]['objects'].length!=0){
         //check type.object (for now is only object or npc)
@@ -483,7 +583,7 @@ function drawMap(disp_area){
           if (tile_map[sprtX][sprtY]['objects'][object].type==='object'){
             sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite']
             ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
-              col*BLOCKSIZE, row*BLOCKSIZE, 16,16);
+              col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
           }
           //draw npcs
           else if (tile_map[sprtX][sprtY]['objects'][object].type==='npc'){
@@ -492,7 +592,7 @@ function drawMap(disp_area){
               let npcFacing=tile_map[sprtX][sprtY]['objects'][object].facing;
               sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite'][npcFacing];
               ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
-                col*BLOCKSIZE, row*BLOCKSIZE, 16,16);
+                col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
             } else {
               //remove the objectless sprite!
               delete tile_map[sprtX][sprtY]['objects'][object];
@@ -502,8 +602,13 @@ function drawMap(disp_area){
         }
       }
     }
+    if (bigMap){
+      //draw redX in top left corner
+      ctx.drawImage(spriteSheet, gameObjects['redX'].sprite[0],gameObjects['redX'].sprite[1], 16,16, 
+        0,0, 25,25)
+    }
   }
-  if (raining){//gray gradient that makes it look dark and cloudy!
+  if (raining && !bigMap){//gray gradient that makes it look dark and cloudy!
     ctx.fillStyle = gradient;
     ctx.fillRect(0,0, canvas.width, canvas.height);
   }
@@ -521,11 +626,16 @@ function updateNPCs(){
 function update(){
   //game logic here
   ctx.clearRect(0,0,300,300);
-  let disp_area=getDispArea();
   //uddate player
   updateNPCs();
-  drawMap(disp_area);
-  drawPlayer();//or draw player as object of tile they are on?
+  if (!bigMap){
+    let disp_area=getDispArea();
+    drawMap(disp_area);
+    drawPlayer();
+  } else {
+    let disp_area=drawBigMap();
+    drawMap(disp_area);
+  }
   drawStats();
 }
 
