@@ -216,6 +216,17 @@ function Player(){
 }
 
 let player = new Player();
+var playerX = 15;
+var playerY = 15;
+var playerLoc = localStorage.getItem("playerLoc");
+if (playerLoc!==null){
+  playerLoc=JSON.parse(playerLoc);
+  playerX=playerLoc[0];
+  playerY=playerLoc[1];
+} else {
+  playerX=15;
+  playerY=15;
+}
 
 //get user stats from local storage
 var playerStats = localStorage.getItem("playerStats");
@@ -227,9 +238,6 @@ if (playerStats!==null){
 ghostR = [48,80];//ghost facing right coords
 ghostL = [64,96];//ghost facing left coords
 ghostFacing='rt';
-
-var playerX=15;//position on map
-var playerY=15;
 
 //returns array of -20 to +20 from playerX,playerY
 function getDispArea(){
@@ -326,6 +334,7 @@ function movePlayer(direction) {
   }
   playerX=potentialX;
   playerY=potentialY;
+  localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]))
 }
 
 drawPlayer = function(){
@@ -505,10 +514,6 @@ function Skeleton(){
   }
 }
 
-//generate npcs
-for (i=0;i<25;i++){
-  npcs.push(new Skeleton);
-}
 //id testing
 function generateID(){//this is not best practice, just for testing. max of 1000 objects
   //returns id if not in list
@@ -519,35 +524,52 @@ function generateID(){//this is not best practice, just for testing. max of 1000
     //console.log(npcid);
     let indexCheck = game_object_ids.indexOf(npcid) !== -1;
     if (indexCheck===false){
-      return npcid
+      return npcid;
     }
   }
 }
 game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
-for (npc in npcs){
-  id_ok = false;
-  let npcid=null;
-  while (id_ok===false){
-    npcid = Math.floor(Math.random()*1000);
-    //console.log(npcid);
-    let indexCheck = game_ids.indexOf(npcid) !== -1;
-    if (indexCheck===false){
-      game_ids.push(npcid);
-      npcs[npc].spriteData.id=npcid;
-      npcs[npc].id=npcid;
-      id_ok=true;
-    }
+
+//infinite skeletons for taylor. comment out for only 45 skeletons until refresh
+setInterval(function(){
+  //check npcs list, generate more skeletons
+  if (npcs.length<45){
+   // for (i=0;i<5;i++){
+      //npcs.push(new Skeleton());
+      let newSkele = new Skeleton;
+      newSkele.spriteData.id=generateID();
+      console.log(newSkele.spriteData.id);
+      coords_ok=false;
+      do {
+        //generate random coords, check if those coords base tile or objects have collision
+        //if collision, reroll. coords good, coords_ok=true;
+        newSkele.x=Math.floor(Math.random()*80);
+        newSkele.y=Math.floor(Math.random()*80);
+        if (newSkele.x<=10){
+          newSkele.x=11;
+        }
+        if (newSkele.y<=10){
+          newSkele.y=11;
+        }
+        if (tile_map[newSkele.x][newSkele.y].sprite.collision===true){
+          continue;
+        }
+        //if here just have to check for object collision now
+        for (object in tile_map[newSkele.x][newSkele.y].objects){
+          if (tile_map[newSkele.x][newSkele.y].objects[object].collision===true){
+            continue;
+          }
+        }
+        coords_ok=true;
+      } while (coords_ok===false);
+      game_ids.push(newSkele.spriteData.id)
+      newSkele.id=newSkele.spriteData.id;
+      npcs.push(newSkele);
+      tile_map[newSkele.x][newSkele.y].objects.push(newSkele.spriteData);
+   // }
   }
-  npcs[npc].x=Math.floor(Math.random()*80);
-  npcs[npc].y=Math.floor(Math.random()*80);
-  if (npcs[npc].x<=10){
-    npcs[npc].x=11;
-  }
-  if (npcs[npc].y<=10){
-    npcs[npc].y=11;
-  }
-  tile_map[npcs[npc].x][npcs[npc].y].objects.push(npcs[npc].spriteData);
-}
+},2000);
+
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
