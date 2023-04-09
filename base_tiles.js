@@ -59,17 +59,29 @@ baseTiles = {//redo entirely and in order
     "deskCRV3":[96,1264],
     "deskCRV4":[112,1264],
     "redX":[288,751],//this one was weird
-    "redDownArrow":[96,640]
+    "redDownArrow":[96,640],
+    "glasspane1":[160,560]
   }
 
   npcTiles = {
     "skelR":[128,16],
     "skelL":[128,32],
     "ghostR":[48,80],//ghost facing right coords
-    "ghostL":[64,96]//ghost facing left coords
+    "ghostL":[64,96],//ghost facing left coords
+    "ratR":[112,144],
+    "ratL":[192,128]
   }
 
   gameObjects = {
+    "rat":{
+        "name":"rat",
+        "id":null,
+        "sprite":{"left":npcTiles['ratR'],"right":npcTiles['ratL']},
+        "facing":"left",
+        "type":"npc",
+        "collision":true,
+        "attackable":true
+    },
     "skeleton":{//character.sprite is now both sets of coords for left and right facing
         "name":"skeleton",//so player/npc sprites get drawn differently
         "id":null,//add id upon npc object creation (if player id added, it will work differently than here)
@@ -79,6 +91,12 @@ baseTiles = {//redo entirely and in order
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "glasspane1":{
+        "name":"glasspane1",
+        "sprite":baseTiles["glasspane1"],
+        "type":"object",
+        "collision":false
     },
     "redDownArrow":{
         "name":"redDownArrow",

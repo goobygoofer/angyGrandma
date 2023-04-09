@@ -44,6 +44,7 @@ function toggleMap(){
 function drawStats(){
   if (!showStats){return;};
   ctx.fillStyle="white";
+  ctx.fillText("health: " + player.skills['health']['health'], 0,240);
   ctx.fillText("walking xp: " + player.skills.walking.xp, 0,250);
   ctx.fillText("strength xp: " + player.skills.strength.xp, 0, 260);
 }
@@ -130,6 +131,43 @@ dropdown.addEventListener("change",function(){
 })
 
 // add arrow key listener for desktop users
+let timerId;
+var delay = 30; // delay time in milliseconds
+
+document.addEventListener('keydown', (event) => {
+  if (event.target.nodeName==='SELECT') {
+    return;
+  }
+  if (timerId) {
+    clearTimeout(timerId);
+  }
+  timerId = setTimeout(() => {
+    switch (event.key) {
+      case ' ':
+        placeTile(objectToPlace);
+        break;
+      case 'ArrowUp':
+      case 'w':
+        movePlayer('up');
+        break;
+      case 'ArrowDown':
+      case 's':
+        movePlayer('down');
+        break;
+      case 'ArrowLeft':
+      case 'a':
+        movePlayer('left');
+        break;
+      case 'ArrowRight':
+      case 'd':
+        movePlayer('right');
+        break;
+      default:
+        break;
+    }
+  }, delay);
+});
+/*
 document.addEventListener('keydown', (event) => {
   if (event.target.nodeName==='SELECT'){//probably unnecessary, added because of element focus issues
     return;
@@ -159,6 +197,7 @@ document.addEventListener('keydown', (event) => {
       break;
   }; 
 });
+*/
 //convenient buttons for mouse or mobile
 document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
 document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
@@ -172,6 +211,14 @@ document.getElementById('collisionButton').addEventListener('click', () => toggl
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 document.getElementById('statsButton').addEventListener('click', () => toggleStats());
 
+/*
+document.addEventListener('keydown', function(event){
+  if (timerId) {
+    clearTimeout(timerId);
+  }
+  timerId = setTimeout(mov)
+})
+*/
 function isTopLeftClicked(event, canvas){
   const rect = canvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
@@ -202,7 +249,8 @@ canvas.addEventListener('touchend', event => {
 function Player(){
   this.skills = {
     "walking":{"xp":0,"lvl":1},
-    "strength":{"xp":0,"lvl":1}
+    "strength":{"xp":0,"lvl":1},
+    "health":{"xp":0,"health":100}
   };
   this.inventory = [];
   this.incrementSkill = function(skill, amount){
@@ -213,9 +261,15 @@ function Player(){
   this.attack = function(target){
     target.getAttacked(this.skills.strength.lvl);
   }
+  this.getAttacked = function(damage){
+    this.skills.health['health']-=damage;
+    localStorage['playerStats']=JSON.stringify(this.skills);
+    //play player hit sound here
+  }
 }
 
 let player = new Player();
+//player.skills.health['health']=100;
 var playerX = 15;
 var playerY = 15;
 var playerLoc = localStorage.getItem("playerLoc");
@@ -407,6 +461,16 @@ function checkCollision(nextX, nextY){
   } 
 }
 
+function countObjectsByPropertyValue(list, property, value){
+  let count=0;
+  for (let i = 0; i< list.length; i++){
+    if (list[i][property]===value){
+      count++;
+    }
+  }
+  return count;
+}
+
 //holy sweet jesus christ have to get rid of some of these...
 function hasFunction(obj, functionName){
   return obj && obj.hasOwnProperty(functionName) && typeof obj[functionName] ==='function';
@@ -446,22 +510,31 @@ function isObjectInList(list, npcid){
 //passive npc setup testing///////////////////////////////////////////////////////////////////////////////////////////
 move_dir=["up","down","left","right"];
 
-function moveNPC(curX,curY){//for passive (non-aggressive/tracking) movement
+function moveNPC(curX,curY, definite=false){//for passive (non-aggressive/tracking) movement
   //calculate random move, return x,y
   let potentialX=null;
   let potentialY=null;
-  let facing=null;
-  moveDir = move_dir[Math.floor(Math.random() * 4)];
-  if (moveDir==='up'){potentialX=curX-1;potentialY=curY;};
-  if (moveDir==='down'){potentialX=curX+1;potentialY=curY;};
-  if (moveDir==='left'){
-    potentialX=curX;potentialY=curY-1;
-    facing="left";
-  };
-  if (moveDir==='right'){
-    potentialX=curX;potentialY=curY+1;
-    facing="right";
-  };
+  let facing="right";
+  if (!definite){
+    //let potentialX=null;
+    //let potentialY=null;
+    //let facing="right";//might need to change this?
+    moveDir = move_dir[Math.floor(Math.random() * 4)];
+    if (moveDir==='up'){potentialX=curX-1;potentialY=curY;};
+    if (moveDir==='down'){potentialX=curX+1;potentialY=curY;};
+    if (moveDir==='left'){
+      potentialX=curX;potentialY=curY-1;
+      facing="left";
+    };
+    if (moveDir==='right'){
+      potentialX=curX;potentialY=curY+1;
+      facing="right";
+    };
+  } else {
+    //definite move, npc tracking to player
+    potentialX=curX;
+    potentialY=curY;
+  }
   //check potential tile for collision
   let collision = checkCollision(potentialX, potentialY);
   if (collision){return [curX, curY, facing]}
@@ -476,8 +549,107 @@ function removeNPC(id, x, y){
   //console.log("npcs list now: " + npcs)
 }
 
+function trackPlayer(ratX, ratY) {
+  const adjacentSquares = [
+    { x: ratX - 1, y: ratY },
+    { x: ratX + 1, y: ratY },
+    { x: ratX, y: ratY - 1 },
+    { x: ratX, y: ratY + 1 }
+  ];
+
+  let closestDistance = Number.MAX_SAFE_INTEGER;
+  let nextMove = null;
+
+  for (const square of adjacentSquares) {
+    const dx = Math.abs(square.x - playerX);
+    const dy = Math.abs(square.y - playerY);
+    const distance = dx + dy;
+
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      nextMove = square;
+    }
+  }
+
+  return nextMove;
+}
+
+
+
+function distToPlayer(selfX, selfY){
+  let dx = selfX - playerX;
+  let dy = playerY - selfY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
 var npcs=[];//npc's in game, {"[id]":npc_object}
+function Rat(){
+  this.name="rat";
+  this.hp = 3;//lel just testing
+  this.strength = 3;
+  this.spriteData=JSON.parse(JSON.stringify(gameObjects['rat']));
+  this.spriteData.id=null;
+  this.x=null;
+  this.y=null;
+  this.lastTime=Date.now();//timestamp
+  this.delay = 2000;
+  this.aggro = false;
+  this.lastAggro=Date.now();
+  this.strength = 2;
+  this.update = function(){
+    if (this.x===playerX && this.y===playerY){
+      player.getAttacked(this.strength);//need to change to random
+    }
+    if (this.hp<1){
+      skele_die_sound.play();
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
+    let now = Date.now();
+    let restTime = Math.floor(Math.random()*this.delay);
+    if (now > this.lastTime+restTime){
+      this.lastTime=now;
+      //check distance to player
+      if (distToPlayer(this.x, this.y)<=5){
+        this.aggro=true;
+        this.lastAggro=Date.now();
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+      newCoords=null;
+      if (!this.aggro){
+        newCoords=moveNPC(this.x,this.y);//returns x,y
+      } else {
+        //track to player, go to next tile that brings rat closest to player
+        //while trackPlayer not a valid move, retry until valid
+        //or if no valid moves, unaggro (will work for now)
+        trackCoords = trackPlayer(this.x, this.y);
+        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+      }
+      //remove self from current tile
+      if (newCoords[2]!==null){
+        this.spriteData.facing=newCoords[2];
+      }
+      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
+      this.x=newCoords[0];
+      this.y=newCoords[1];
+      //add self to new tile
+      tile_map[this.x][this.y].objects.push(this.spriteData)
+    }
+  }
+  //this.attack = function(){
+  //  //player.getAttacked(this.strength random)
+  //}
+  this.getAttacked = function(damage){
+    //receive attack from player
+    this.hp-=damage;
+    player.skills.strength.xp+=1;
+  }
+}
+
 function Skeleton(){
+  this.name="skeleton";//its in spriteData but had to do it this way for some reason
   this.hp = 1;//lel just testing
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
   this.spriteData.id=null;
@@ -533,16 +705,14 @@ game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id fr
 //infinite skeletons for taylor. comment out for only 45 skeletons until refresh
 setInterval(function(){
   //check npcs list, generate more skeletons
-  if (npcs.length<45){
-   // for (i=0;i<5;i++){
-      //npcs.push(new Skeleton());
+  //countObjectsByPropertyValue(list, property, value)
+  //if (npcs.length<45){
+  if (countObjectsByPropertyValue(npcs, "name", "skeleton")<45){
       let newSkele = new Skeleton;
       newSkele.spriteData.id=generateID();
       console.log(newSkele.spriteData.id);
       coords_ok=false;
       do {
-        //generate random coords, check if those coords base tile or objects have collision
-        //if collision, reroll. coords good, coords_ok=true;
         newSkele.x=Math.floor(Math.random()*80);
         newSkele.y=Math.floor(Math.random()*80);
         if (newSkele.x<=10){
@@ -566,9 +736,43 @@ setInterval(function(){
       newSkele.id=newSkele.spriteData.id;
       npcs.push(newSkele);
       tile_map[newSkele.x][newSkele.y].objects.push(newSkele.spriteData);
-   // }
   }
 },2000);
+
+setInterval(function(){
+  //check npcs list, generate more skeletons
+  if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
+      let newRat = new Rat;
+      newRat.spriteData.id=generateID();
+      console.log(newRat.spriteData.id);
+      coords_ok=false;
+      do {
+        newRat.x=Math.floor(Math.random()*80);
+        newRat.y=Math.floor(Math.random()*80);
+        if (newRat.x<=10){
+          newRat.x=11;
+        }
+        if (newRat.y<=10){
+          newRat.y=11;
+        }
+        if (tile_map[newRat.x][newRat.y].sprite.collision===true){
+          continue;
+        }
+        //if here just have to check for object collision now
+        for (object in tile_map[newRat.x][newRat.y].objects){
+          if (tile_map[newRat.x][newRat.y].objects[object].collision===true){
+            continue;
+          }
+        }
+        coords_ok=true;
+      } while (coords_ok===false);
+      game_ids.push(newRat.spriteData.id)
+      newRat.id=newRat.spriteData.id;
+      npcs.push(newRat);
+      tile_map[newRat.x][newRat.y].objects.push(newRat.spriteData);
+  }
+},2000);
+
 
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
 
