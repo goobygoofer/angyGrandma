@@ -7,12 +7,14 @@ function toggleCollision(){
     master_collision=false;
   }
 }
-var raining = true;
+var raining = false;
 function toggleRain(){
   if (raining===true){
     raining=false;
+    playRain();//confusing yea, but it's more like toggle rain...
   } else{
     raining=true;
+    playRain();
   }
 }
 
@@ -60,6 +62,29 @@ game_objects.push(new mapSign());
 //sound stuff//////////////////////////////////////////////////////////////////////////
 
 const skele_die_sound = new Audio('skele_die.mp3');
+const rain_sound = new Audio('rain.mp3');
+rain_sound.loop=true;
+rain_sound.addEventListener('timeupdate', () => {
+  if (rain_sound.currentTime>=20 && rain_sound.currentTime<=21){
+    //trigger lightning
+    console.log("lightning!");
+    ctx.fillStyle='rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+  }
+});
+
+function playRain(){
+  if (raining){
+    rain_sound.curentTime = 0;
+    rain_sound.play();
+  } else {
+    rain_sound.pause();
+  }
+}
+
+//if (raining){//since rain default and wasn't starting when page loaded idk
+//  playRain();
+//}
 
 //end sound stuff//////////////////////////////////////////////////////////////////////
 
@@ -606,6 +631,9 @@ function drawMap(disp_area){
       //draw redX in top left corner
       ctx.drawImage(spriteSheet, gameObjects['redX'].sprite[0],gameObjects['redX'].sprite[1], 16,16, 
         0,0, 25,25)
+      //draw player 'you are here' thingy
+      ctx.drawImage(spriteSheet, gameObjects['redDownArrow'].sprite[0], gameObjects['redDownArrow'].sprite[1], 
+        16, 16, playerX*3-3, playerY*3-3, 8,8)
     }
   }
   if (raining && !bigMap){//gray gradient that makes it look dark and cloudy!
