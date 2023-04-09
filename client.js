@@ -1,4 +1,4 @@
-//debug stuffs
+//debug stuffsT
 function deathScreen(){
   ctx.fillStyle='black';
   ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -30,7 +30,6 @@ function toggleStats(){
     showStats=false;
   } else{
     showStats=true;
-    console.log("stats");
   }
 }
 
@@ -52,8 +51,8 @@ function drawStats(){
   if (!showStats){return;};
   ctx.fillStyle="white";
   ctx.fillText("health: " + player.skills['health']['health'], 0,240);
-  ctx.fillText("walking xp: " + player.skills.walking.xp, 0,250);
-  ctx.fillText("strength xp: " + player.skills.strength.xp, 0, 260);
+  ctx.fillText("walking xp: " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 0,250);
+  ctx.fillText("strength xp: " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 0, 260);
 }
 
 var game_object_ids = [];
@@ -69,6 +68,7 @@ function mapSign(){
 game_objects.push(new mapSign());
 //sound stuff//////////////////////////////////////////////////////////////////////////
 
+const hit_sound = new Audio('hit.mp3');
 const skele_die_sound = new Audio('skele_die.mp3');
 const rain_sound = new Audio('rain.mp3');
 rain_sound.loop=true;
@@ -89,11 +89,6 @@ function playRain(){
     rain_sound.pause();
   }
 }
-
-//if (raining){//since rain default and wasn't starting when page loaded idk
-//  playRain();
-//}
-
 //end sound stuff//////////////////////////////////////////////////////////////////////
 
 //UI setup////////////////////////////////////////////////////////////////////////////
@@ -174,37 +169,7 @@ document.addEventListener('keydown', (event) => {
     }
   }, delay);
 });
-/*
-document.addEventListener('keydown', (event) => {
-  if (event.target.nodeName==='SELECT'){//probably unnecessary, added because of element focus issues
-    return;
-  }
-  //event.preventDefault(); //where did we put this that it had some desired effect? lel
-  switch (event.key) {
-    case ' ':
-      placeTile(objectToPlace);
-      break;
-    case 'ArrowUp':
-    case 'w':
-      movePlayer('up');
-      break;
-    case 'ArrowDown':
-    case 's':
-      movePlayer('down');
-      break;
-    case 'ArrowLeft':
-    case 'a':
-      movePlayer('left');
-      break;
-    case 'ArrowRight':
-    case 'd':
-      movePlayer('right');
-      break;
-    default:
-      break;
-  }; 
-});
-*/
+
 //convenient buttons for mouse or mobile
 document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
 document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
@@ -218,14 +183,6 @@ document.getElementById('collisionButton').addEventListener('click', () => toggl
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 document.getElementById('statsButton').addEventListener('click', () => toggleStats());
 
-/*
-document.addEventListener('keydown', function(event){
-  if (timerId) {
-    clearTimeout(timerId);
-  }
-  timerId = setTimeout(mov)
-})
-*/
 function isTopLeftClicked(event, canvas){
   const rect = canvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
@@ -250,6 +207,40 @@ canvas.addEventListener('touchend', event => {
     console.log("user touched top left corner");
   }
 });
+
+const fileInput = document.getElementById('file-input');
+fileInput.addEventListener('change', (event) => {
+  //saveToLocal();
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const fileContents = event.target.result;
+    localStorage.setItem('userMap', fileContents);
+    tile_map=localStorage['userMap'];
+    console.log(localStorage['userMap'])
+    alert('file uploaded to local storage! page should refresh...');
+  }
+  reader.readAsText(file);
+  //saveToLocal();
+  location.reload();
+});
+
+function downloadArrayAsJSFile(array, filename){
+  const jsonString=JSON.stringify(array, null, 2);
+  const plainText = jsonString.replaceAll('\\','').slice(1,-1);
+  const blob = new Blob([plainText], {type: 'application/javascript'});
+  const url = URL.createObjectURL(blob);
+  const downloadLink = document.createElement('a');
+  downloadLink.href=url;
+  downloadLink.download=`${filename}.js`;
+  downloadLink.click();
+  URL.revokeObjectURL(url);
+}
+
+const downloadButton = document.getElementById('download-button');
+downloadButton.addEventListener('click', () => {
+  downloadArrayAsJSFile(localStorage['userMap'], "my_map");
+})
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
@@ -257,34 +248,60 @@ function Player(){
   this.skills = {
     "walking":{"xp":0,"lvl":1},
     "strength":{"xp":0,"lvl":1},
-    "health":{"xp":0,"health":100}
+    "health":{"xp":0,"health":100,"max":100, "lvl":1},
+    "playerLvl":1
   };
   this.update = function(){
     if (this.skills.health['health']<=0){
-      this.skills.health['health']=100;
+      this.skills.health['health']=this.skills.health.max;
       localStorage['playerStats']=JSON.stringify(this.skills);
       deathScreen();
       setTimeout(location.reload(),3000);
     }
-  }
+    for (skill in this.skills){
+      if (skill!=='health'){
+        this.checkLevelUp(this.skills[skill]);
+      } else {
+        this.checkLevelUp(this.skills['health'], true);
+        }
+      }
+    }
   this.inventory = [];
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
     localStorage['playerStats']=JSON.stringify(this.skills);
     //then check if skill leveled up
   }
+  this.checkLevelUp = function (skill, hp=false){
+    let xpNeeded = Math.floor(100*Math.pow(1.25, skill.lvl));
+
+    if (skill.xp >= xpNeeded){
+      if (!hp){
+        skill.lvl++;
+        skill.xp = skill.xp - xpNeeded;
+      } else {
+        skill.xp=0;//skill.xp-xpNeeded;
+        skill.lvl++;
+        skill.health+=10;
+        skill.max+=10;
+      }
+    }
+  }
   this.attack = function(target){
     target.getAttacked(this.skills.strength.lvl);
+    hit_sound.play();
   }
   this.getAttacked = function(damage){
     this.skills.health['health']-=damage;
     localStorage['playerStats']=JSON.stringify(this.skills);
     //play player hit sound here
+    hit_sound.play();
   }
 }
 
 let player = new Player();
-//player.skills.health['health']=100;
+
+player.skills.health['health']=player.skills.health.max;
 var playerX = 15;
 var playerY = 15;
 var playerLoc = localStorage.getItem("playerLoc");
@@ -531,9 +548,6 @@ function moveNPC(curX,curY, definite=false){//for passive (non-aggressive/tracki
   let potentialY=null;
   let facing="right";
   if (!definite){
-    //let potentialX=null;
-    //let potentialY=null;
-    //let facing="right";//might need to change this?
     moveDir = move_dir[Math.floor(Math.random() * 4)];
     if (moveDir==='up'){potentialX=curX-1;potentialY=curY;};
     if (moveDir==='down'){potentialX=curX+1;potentialY=curY;};
@@ -598,6 +612,65 @@ function distToPlayer(selfX, selfY){
 }
 
 var npcs=[];//npc's in game, {"[id]":npc_object}
+function Spider(){
+  this.name="spider";
+  this.hp = 5;
+  this.strength = 2;
+  this.spriteData=JSON.parse(JSON.stringify(gameObjects['spider']));
+  this.spriteData.id=null;
+  this.x=null;
+  this.y=null;
+  this.lastTime=Date.now();//timestamp
+  this.delay = 1000;
+  this.aggro = false;
+  this.lastAggro=Date.now();
+  this.aggroRange = 10;
+  this.update = function(){
+    if (this.x===playerX && this.y===playerY){
+      player.getAttacked(this.strength);//need to change to random
+    }
+    if (this.hp<1){
+      skele_die_sound.play();
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
+    let now = Date.now();
+    let restTime = Math.floor(Math.random()*this.delay);
+    if (now > this.lastTime+restTime){
+      this.lastTime=now;
+      //check distance to player
+      if (distToPlayer(this.x, this.y)<=this.aggroRange){
+        this.aggro=true;
+        this.lastAggro=Date.now();
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+      newCoords=null;
+      if (!this.aggro){
+        newCoords=moveNPC(this.x,this.y);//returns x,y
+      } else {
+        trackCoords = trackPlayer(this.x, this.y);
+        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+      }
+      //remove self from current tile
+      if (newCoords[2]!==null){
+        this.spriteData.facing=newCoords[2];
+      }
+      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
+      this.x=newCoords[0];
+      this.y=newCoords[1];
+      //add self to new tile
+      tile_map[this.x][this.y].objects.push(this.spriteData)
+    }
+  }
+  this.getAttacked = function(damage){
+    this.hp-=damage;
+    player.incrementSkill("strength", 5);
+    player.incrementSkill("health", 2);
+  }
+}
+
 function Rat(){
   this.name="rat";
   this.hp = 3;//lel just testing
@@ -636,10 +709,7 @@ function Rat(){
       if (!this.aggro){
         newCoords=moveNPC(this.x,this.y);//returns x,y
       } else {
-        //track to player, go to next tile that brings rat closest to player
-        //while trackPlayer not a valid move, retry until valid
-        //or if no valid moves, unaggro (will work for now)
-        trackCoords = trackPlayer(this.x, this.y);
+        trackCoords = trackPlayer(this.x, this.y);//this is broken lol
         newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
       }
       //remove self from current tile
@@ -653,13 +723,11 @@ function Rat(){
       tile_map[this.x][this.y].objects.push(this.spriteData)
     }
   }
-  //this.attack = function(){
-  //  //player.getAttacked(this.strength random)
-  //}
   this.getAttacked = function(damage){
     //receive attack from player
     this.hp-=damage;
-    player.skills.strength.xp+=1;
+    player.incrementSkill("strength", 3);
+    player.incrementSkill("health", 1);
   }
 }
 
@@ -697,7 +765,9 @@ function Skeleton(){
   this.getAttacked = function(damage){
     //receive attack from player
     this.hp-=damage;
-    player.skills.strength.xp+=1;
+    //player.skills.strength.xp+=1;
+    player.incrementSkill("strength", 1);
+    player.incrementSkill("health", 1);
   }
 }
 
@@ -716,12 +786,41 @@ function generateID(){//this is not best practice, just for testing. max of 1000
   }
 }
 game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
+setInterval(function(){
+  if (countObjectsByPropertyValue(npcs, "name", "spider")<20){
+      let newSpide = new Spider;//should work without changing newSkeles lol
+      newSpide.spriteData.id=generateID();
+      console.log(newSpide.spriteData.id);
+      coords_ok=false;
+      do {
+        newSpide.x=Math.floor(Math.random()*80);
+        newSpide.y=Math.floor(Math.random()*80);
+        if (newSpide.x<=50){
+          newSpide.x=51;
+        }
+        if (newSpide.y<=50){
+          newSpide.y=51;
+        }
+        if (tile_map[newSpide.x][newSpide.y].sprite.collision===true){
+          continue;
+        }
+        //if here just have to check for object collision now
+        for (object in tile_map[newSpide.x][newSpide.y].objects){
+          if (tile_map[newSpide.x][newSpide.y].objects[object].collision===true){
+            continue;
+          }
+        }
+        coords_ok=true;
+      } while (coords_ok===false);
+      game_ids.push(newSpide.spriteData.id)
+      newSpide.id=newSpide.spriteData.id;
+      npcs.push(newSpide);
+      tile_map[newSpide.x][newSpide.y].objects.push(newSpide.spriteData);
+  }
+},2500);
 
 //infinite skeletons for taylor. comment out for only 45 skeletons until refresh
 setInterval(function(){
-  //check npcs list, generate more skeletons
-  //countObjectsByPropertyValue(list, property, value)
-  //if (npcs.length<45){
   if (countObjectsByPropertyValue(npcs, "name", "skeleton")<45){
       let newSkele = new Skeleton;
       newSkele.spriteData.id=generateID();
@@ -754,6 +853,7 @@ setInterval(function(){
   }
 },2000);
 
+
 setInterval(function(){
   //check npcs list, generate more skeletons
   if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
@@ -764,8 +864,8 @@ setInterval(function(){
       do {
         newRat.x=Math.floor(Math.random()*80);
         newRat.y=Math.floor(Math.random()*80);
-        if (newRat.x<=10){
-          newRat.x=11;
+        if (newRat.x<=50){
+          newRat.x=51;
         }
         if (newRat.y<=10){
           newRat.y=11;
@@ -786,11 +886,8 @@ setInterval(function(){
       npcs.push(newRat);
       tile_map[newRat.x][newRat.y].objects.push(newRat.spriteData);
   }
-},2000);
-
-
+},4000);
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 //main///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 function drawWeather(x,y){
@@ -808,11 +905,6 @@ const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, c
 gradient.addColorStop(0,"transparent");
 gradient.addColorStop(1, "DarkGray");
 
-
-//add mapsign as an object
-//if player walks into map, interact next tile interacts with map object
-//player walks away, map goes away
-//need mini map (togglable)
 function drawBigMap(){
   //draw all tiles except 1/16 size? will have to see how it works out
   dispList=[]
@@ -824,7 +916,6 @@ function drawBigMap(){
     dispList.push(innerList);
   }
   return dispList;
-
 }
 
 function drawMap(disp_area){

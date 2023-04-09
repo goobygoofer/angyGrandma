@@ -69,10 +69,21 @@ baseTiles = {//redo entirely and in order
     "ghostR":[48,80],//ghost facing right coords
     "ghostL":[64,96],//ghost facing left coords
     "ratR":[112,144],
-    "ratL":[192,128]
+    "ratL":[192,128],
+    "spiderR":[96,240],
+    "spiderL":[112, 240]
   }
 
   gameObjects = {
+    "spider":{
+        "name":"spider",
+        "id":null,
+        "sprite":{"left":npcTiles['spiderR'],"right":npcTiles['spiderL']},
+        "facing":"left",
+        "type":"npc",
+        "collision":true,
+        "attackable":true
+    },
     "rat":{
         "name":"rat",
         "id":null,
