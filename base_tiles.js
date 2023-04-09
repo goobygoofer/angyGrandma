@@ -58,7 +58,8 @@ baseTiles = {//redo entirely and in order
     "deskCRV2":[32,144],
     "deskCRV3":[96,1264],
     "deskCRV4":[112,1264],
-    "redX":[288,751]//this one was weird
+    "redX":[288,751],//this one was weird
+    "redDownArrow":[96,640]
   }
 
   npcTiles = {
@@ -78,6 +79,12 @@ baseTiles = {//redo entirely and in order
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "redDownArrow":{
+        "name":"redDownArrow",
+        "sprite":baseTiles["redDownArrow"],
+        "type":"object",
+        "collision":false
     },
     "redX":{
         "name":"redX",
