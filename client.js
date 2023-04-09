@@ -1,4 +1,10 @@
 //debug stuffs
+function deathScreen(){
+  ctx.fillStyle='black';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  //working on this
+}
+
 var master_collision = false
 function toggleCollision(){
   if (master_collision===false){
@@ -252,6 +258,14 @@ function Player(){
     "strength":{"xp":0,"lvl":1},
     "health":{"xp":0,"health":100}
   };
+  this.update = function(){
+    if (this.skills.health['health']<=0){
+      this.skills.health['health']=100;
+      localStorage['playerStats']=JSON.stringify(this.skills);
+      deathScreen();
+      setTimeout(location.reload(),3000);
+    }
+  }
   this.inventory = [];
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
@@ -882,6 +896,7 @@ function update(){
   ctx.clearRect(0,0,300,300);
   //uddate player
   updateNPCs();
+  player.update();
   if (!bigMap){
     let disp_area=getDispArea();
     drawMap(disp_area);
