@@ -30,6 +30,7 @@ function toggleStats(){
     showStats=false;
   } else{
     showStats=true;
+    console.log("stats");
   }
 }
 
