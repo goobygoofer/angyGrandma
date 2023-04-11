@@ -975,7 +975,7 @@ function drawWeather(x,y){
   if (raining===true){
     let randomInt = Math.random();
     if (randomInt>=0.9){
-      for (i=0;i<4;i++){
+      for (let i=0;i<4;i++){
         ctx.drawImage(spriteSheet, gameObjects['rain']['sprite'][0],gameObjects['rain']['sprite'][1], 16,16, 
           x,y, 16,16)
       }//just to make the rain darker
