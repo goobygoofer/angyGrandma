@@ -877,6 +877,7 @@ setInterval(function(){
           continue;
         }
         //if here just have to check for object collision now
+        let object;
         for (object in tile_map[newSpide.x][newSpide.y].objects){
           if (tile_map[newSpide.x][newSpide.y].objects[object].collision===true){
             continue;
