@@ -1,3 +1,4 @@
+"use strict";
 //debug stuffsT
 function deathScreen(){
   ctx.fillStyle='black';
@@ -35,6 +36,7 @@ function toggleStats(){
 
 var bigMap = false;
 var DRAWSIZE = 16;
+var BLOCKSIZE = 16;
 function toggleMap(){
   if (bigMap===true){
     BLOCKSIZE = 16;
@@ -103,6 +105,10 @@ const sprtCtx = sprtCanvas.getContext('2d');
 const spriteSheet = new Image();
 spriteSheet.src = 'spritesheet-0.5.18.png';
 BLOCKSIZE=16;//maybe not need this or shorten var name
+
+////////////////////////////////////////////////////////////////////////NEW UI TESTING REMOVE IF SUCKS
+
+////////////////////////////////////////////////////////////////////////END NEW UI TESTING REMOVE IF IT SUCKS
 
 //get user previous map from local storage
 var myData = localStorage.getItem("userMap");
@@ -183,8 +189,8 @@ document.getElementById('collisionButton').addEventListener('click', () => toggl
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 document.getElementById('statsButton').addEventListener('click', () => toggleStats());
 
-function isTopLeftClicked(event, canvas){
-  const rect = canvas.getBoundingClientRect();
+function isTopLeftClicked(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
   return x < 25 && y < 25;
@@ -210,19 +216,19 @@ canvas.addEventListener('touchend', event => {
 
 const fileInput = document.getElementById('file-input');
 fileInput.addEventListener('change', (event) => {
-  //saveToLocal();
   const file = event.target.files[0];
   const reader = new FileReader();
   reader.onload = (event) => {
     const fileContents = event.target.result;
     localStorage.setItem('userMap', fileContents);
     tile_map=localStorage['userMap'];
+    saveToLocal();
     console.log(localStorage['userMap'])
     alert('file uploaded to local storage! page should refresh...');
   }
-  reader.readAsText(file);
-  //saveToLocal();
+  reader.readAsText(file);//is this necessary?
   location.reload();
+  console.log("refresh the page...");
 });
 
 function downloadArrayAsJSFile(array, filename){
@@ -245,6 +251,9 @@ downloadButton.addEventListener('click', () => {
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
 function Player(){
+  this.lastTime = Date.now();
+  this.lastMove = Date.now();
+  this.regenTime=5000;
   this.skills = {
     "walking":{"xp":0,"lvl":1},
     "strength":{"xp":0,"lvl":1},
@@ -252,12 +261,26 @@ function Player(){
     "playerLvl":1
   };
   this.update = function(){
-    if (this.skills.health['health']<=0){
-      this.skills.health['health']=this.skills.health.max;
-      localStorage['playerStats']=JSON.stringify(this.skills);
-      deathScreen();
-      setTimeout(location.reload(),3000);
+    if (nextToFire()){
+      this.regenTime = 2000;
+    } else {
+      this.regenTime = 5000;
     }
+    if (this.skills.health['health'] < this.skills.health['max']){
+      if (this.skills.health['health'] > 0){// && Date.now() > this.lastTime+5000){
+        //regen health
+        if (Date.now() > this.lastTime+this.regenTime){
+          this.skills.health['health']+=1;
+          this.lastTime=Date.now();
+        }
+      } else {
+        this.skills.health['health']=this.skills.health.max;
+        localStorage['playerStats']=JSON.stringify(this.skills);
+        deathScreen();
+        setTimeout(location.reload(),3000);
+      }
+    }
+    var skill;
     for (skill in this.skills){
       if (skill!=='health'){
         this.checkLevelUp(this.skills[skill]);
@@ -321,12 +344,14 @@ if (playerStats!==null){
   playerStats=null;
 }
 
-ghostR = [48,80];//ghost facing right coords
-ghostL = [64,96];//ghost facing left coords
-ghostFacing='rt';
+var ghostR = [48,80];//ghost facing right coords
+var ghostL = [64,96];//ghost facing left coords
+var ghostFacing='rt';
 
 //returns array of -20 to +20 from playerX,playerY
 function getDispArea(){
+  var minX;
+  var minY;
   if (playerX<=9){
     minX=9;
   } else{
@@ -337,10 +362,10 @@ function getDispArea(){
   } else{
     minY=playerY-9;
   }
-  dispList=[]
-  for (i=minY;i<minY+19;i++){
-    innerList=[]
-    for (j=minX;j<minX+19;j++){
+  var dispList=[]
+  for (let i=minY;i<minY+19;i++){
+    let innerList=[]
+    for (let j=minX;j<minX+19;j++){
       innerList.push([j,i]);
     }
     dispList.push(innerList);
@@ -349,9 +374,10 @@ function getDispArea(){
 }
 //player interact with next tile
 function interactNPC(nextX, nextY){
+  var object;
   for (object in tile_map[nextX][nextY].objects){
     if (tile_map[nextX][nextY].objects[object].type=="npc"){
-      targetNPC=getNpcById(tile_map[nextX][nextY].objects);
+      var targetNPC=getNpcById(tile_map[nextX][nextY].objects);
       targetNPC=targetNPC[0].id;
       targetNPC=filterNpcById(npcs, targetNPC)[0];
       if (targetNPC.spriteData.attackable===true){
@@ -363,9 +389,11 @@ function interactNPC(nextX, nextY){
 }
 
 function interactObject(nextX, nextY){
+  var object;
   for (object in tile_map[nextX][nextY].objects){
     if (tile_map[nextX][nextY].objects[object].type==="object"){
       let npcid = tile_map[nextX][nextY].objects[object].id//[0].id;
+      var targetNPC;
       targetNPC=filterObjById(game_objects, npcid)[0];
       if (hasFunction(targetNPC, "playerInteract")){
         targetNPC.playerInteract();
@@ -382,12 +410,45 @@ function interactNext(nextX, nextY){
   //check for hostile npcs on next tile
   interactNPC(nextX, nextY);//maybe do this way so there is hierarchy of interaction?
   interactObject(nextX, nextY);
-  check_collision=checkCollision(nextX, nextY);
+  let check_collision=checkCollision(nextX, nextY);
   return check_collision;
+}
+
+function nextToFire(){
+  let coordList = surroundingTiles(playerX, playerY);
+  var coord;
+  for (coord in coordList){
+    //check each tile for a firepit
+    if (tile_map[coordList[coord][0]][coordList[coord][1]].objects.length > 0){
+      var object;
+      for (object in tile_map[coordList[coord][0]][coordList[coord][1]].objects){
+        if (tile_map[coordList[coord][0]][coordList[coord][1]].objects[object].name==="campfire"){
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function surroundingTiles(x, y) {
+  let coords = [];
+  for (let i = x-1; i <= x+1; i++) {
+    for (let j = y-1; j <= y+1; j++) {
+      if (i !== x || j !== y) {
+        coords.push([i, j]);
+      }
+    }
+  }
+  return coords;
 }
 
 //instead check players next potential tile in tile_map
 function movePlayer(direction) {
+  if (Date.now()<player.lastMove+100){
+    return;
+  }
+  player.lastMove=Date.now();
   let potentialX=playerX;
   let potentialY=playerY;
   if (direction === 'up') {//check y-1
@@ -423,9 +484,11 @@ function movePlayer(direction) {
   localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]))
 }
 
-drawPlayer = function(){
+function drawPlayer(){
+    let ghostLoc;
     if (ghostFacing=="rt"){ghostLoc = ghostR}
     else {ghostLoc = ghostL};
+    let drawPointX, drawPointY;
     if (playerX>10){drawPointX=10} else{drawPointX=playerX}
     if (playerY>10){drawPointY=10} else{drawPointY=playerY}
     ctx.drawImage(spriteSheet, ghostLoc[0],ghostLoc[1], 16,16,
@@ -471,6 +534,7 @@ function clearUserMap (){
 
 //pretty obvious function. works for player and npcs (so far)
 function checkCollision(nextX, nextY){
+  var object;
   for (object in tile_map[nextX][nextY]['objects']){
     if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
       return true
@@ -540,13 +604,14 @@ function isObjectInList(list, npcid){
 //end utility functions///////////////////////////////////////////////////////////////////////////////////////////////
 
 //passive npc setup testing///////////////////////////////////////////////////////////////////////////////////////////
-move_dir=["up","down","left","right"];
+var move_dir=["up","down","left","right"];
 
 function moveNPC(curX,curY, definite=false){//for passive (non-aggressive/tracking) movement
   //calculate random move, return x,y
   let potentialX=null;
   let potentialY=null;
   let facing="right";
+  let moveDir;
   if (!definite){
     moveDir = move_dir[Math.floor(Math.random() * 4)];
     if (moveDir==='up'){potentialX=curX-1;potentialY=curY;};
@@ -578,7 +643,7 @@ function removeNPC(id, x, y){
   //console.log("npcs list now: " + npcs)
 }
 
-function trackPlayer(ratX, ratY) {
+function trackPlayer(ratX, ratY) {//lol it doesn't matter, but they arent all rats...
   const adjacentSquares = [
     { x: ratX - 1, y: ratY },
     { x: ratX + 1, y: ratY },
@@ -599,7 +664,6 @@ function trackPlayer(ratX, ratY) {
       nextMove = square;
     }
   }
-
   return nextMove;
 }
 
@@ -609,6 +673,10 @@ function distToPlayer(selfX, selfY){
   let dx = selfX - playerX;
   let dy = playerY - selfY;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+function isOneUnitAway(x1, y1, x2, y2){
+  return Math.abs(x2-x1) > 1 || Math.abs(y2 + y1) > 1;
 }
 
 var npcs=[];//npc's in game, {"[id]":npc_object}
@@ -621,7 +689,7 @@ function Spider(){
   this.x=null;
   this.y=null;
   this.lastTime=Date.now();//timestamp
-  this.delay = 1000;
+  this.delay = 500;
   this.aggro = false;
   this.lastAggro=Date.now();
   this.aggroRange = 10;
@@ -646,13 +714,22 @@ function Spider(){
           this.aggro=false;
         }
       }
-      newCoords=null;
+      var newCoords=null;
       if (!this.aggro){
         newCoords=moveNPC(this.x,this.y);//returns x,y
       } else {
-        trackCoords = trackPlayer(this.x, this.y);
+        var trackCoords = trackPlayer(this.x, this.y);
         newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+        if (checkCollision(newCoords[0], newCoords[1])===true){
+          newCoords=[this.x, this.y, "right"];
+        }
       }
+      
+      if (!isOneUnitAway(this.x, this.y, newCoords[0], newCoords[1])){
+        //don't
+        newCoords=[this.x, this.y, "right"];//messy but should work
+      }
+      
       //remove self from current tile
       if (newCoords[2]!==null){
         this.spriteData.facing=newCoords[2];
@@ -705,12 +782,15 @@ function Rat(){
           this.aggro=false;
         }
       }
-      newCoords=null;
+      var newCoords=null;
       if (!this.aggro){
         newCoords=moveNPC(this.x,this.y);//returns x,y
       } else {
-        trackCoords = trackPlayer(this.x, this.y);//this is broken lol
+        var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
         newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+        if (checkCollision(newCoords[0], newCoords[1])===true){
+          newCoords=[this.x, this.y, "right"];
+        }
       }
       //remove self from current tile
       if (newCoords[2]!==null){
@@ -774,23 +854,15 @@ function Skeleton(){
 //id testing
 function generateID(){//this is not best practice, just for testing. max of 1000 objects
   //returns id if not in list
-  id_ok = false;
-  let npcid=null;
-  while (id_ok===false){//this has the potential to hang when too many objects
-    npcid = Date.now()
-    //console.log(npcid);
-    let indexCheck = game_object_ids.indexOf(npcid) !== -1;
-    if (indexCheck===false){
-      return npcid;
-    }
-  }
+ return crypto.randomUUID();
 }
-game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
+var game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
 setInterval(function(){
   if (countObjectsByPropertyValue(npcs, "name", "spider")<20){
       let newSpide = new Spider;//should work without changing newSkeles lol
       newSpide.spriteData.id=generateID();
       console.log(newSpide.spriteData.id);
+      let coords_ok;
       coords_ok=false;
       do {
         newSpide.x=Math.floor(Math.random()*80);
@@ -817,7 +889,7 @@ setInterval(function(){
       npcs.push(newSpide);
       tile_map[newSpide.x][newSpide.y].objects.push(newSpide.spriteData);
   }
-},2500);
+},2533 );
 
 //infinite skeletons for taylor. comment out for only 45 skeletons until refresh
 setInterval(function(){
@@ -825,6 +897,7 @@ setInterval(function(){
       let newSkele = new Skeleton;
       newSkele.spriteData.id=generateID();
       console.log(newSkele.spriteData.id);
+      var coords_ok;
       coords_ok=false;
       do {
         newSkele.x=Math.floor(Math.random()*80);
@@ -839,10 +912,16 @@ setInterval(function(){
           continue;
         }
         //if here just have to check for object collision now
+        let objCollide = false;
+        var object;
         for (object in tile_map[newSkele.x][newSkele.y].objects){
           if (tile_map[newSkele.x][newSkele.y].objects[object].collision===true){
-            continue;
+            objCollide = true;
+            break;
           }
+        }
+        if (objCollide){
+          continue;
         }
         coords_ok=true;
       } while (coords_ok===false);
@@ -851,7 +930,7 @@ setInterval(function(){
       npcs.push(newSkele);
       tile_map[newSkele.x][newSkele.y].objects.push(newSkele.spriteData);
   }
-},2000);
+},2120);
 
 
 setInterval(function(){
@@ -860,7 +939,7 @@ setInterval(function(){
       let newRat = new Rat;
       newRat.spriteData.id=generateID();
       console.log(newRat.spriteData.id);
-      coords_ok=false;
+      var coords_ok=false;
       do {
         newRat.x=Math.floor(Math.random()*80);
         newRat.y=Math.floor(Math.random()*80);
@@ -874,6 +953,7 @@ setInterval(function(){
           continue;
         }
         //if here just have to check for object collision now
+        let object;
         for (object in tile_map[newRat.x][newRat.y].objects){
           if (tile_map[newRat.x][newRat.y].objects[object].collision===true){
             continue;
@@ -895,8 +975,10 @@ function drawWeather(x,y){
   if (raining===true){
     let randomInt = Math.random();
     if (randomInt>=0.9){
-      ctx.drawImage(spriteSheet, gameObjects['rain']['sprite'][0],gameObjects['rain']['sprite'][1], 16,16, 
-        x,y, 16,16)
+      for (i=0;i<4;i++){
+        ctx.drawImage(spriteSheet, gameObjects['rain']['sprite'][0],gameObjects['rain']['sprite'][1], 16,16, 
+          x,y, 16,16)
+      }//just to make the rain darker
     }
   }
 }
@@ -907,10 +989,10 @@ gradient.addColorStop(1, "DarkGray");
 
 function drawBigMap(){
   //draw all tiles except 1/16 size? will have to see how it works out
-  dispList=[]
-  for (i=0;i<100;i++){
-    innerList=[]
-    for (j=0;j<100;j++){
+  var dispList=[]
+  for (let i=0;i<100;i++){
+    let innerList=[]
+    for (let j=0;j<100;j++){
       innerList.push([j,i]);
     }
     dispList.push(innerList);
@@ -919,12 +1001,13 @@ function drawBigMap(){
 }
 
 function drawMap(disp_area){
+  var row;
   for (row in disp_area){
     //draw base sprite from that area of tile_map
+    var col;
     for (col in disp_area[row]){
       let sprtX=disp_area[row][col][0];
       let sprtY=disp_area[row][col][1];
-      //console.log("[" + sprtX + ", " + sprtY + "]");
       let sprtLoc=gameObjects[tile_map[sprtX][sprtY]['sprite']['name']]['sprite']
       ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
         col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
@@ -935,6 +1018,7 @@ function drawMap(disp_area){
       //drawNPCs(disp_area);//function to draw npcs in player view
       if (tile_map[sprtX][sprtY]['objects'].length!=0){
         //check type.object (for now is only object or npc)
+        var object;
         for (object in tile_map[sprtX][sprtY]['objects']){
           //draw objects
           if (tile_map[sprtX][sprtY]['objects'][object].type==='object'){
@@ -976,6 +1060,7 @@ function drawMap(disp_area){
 
 function updateNPCs(){
   //for npc in npcs, npcs[npc].update();
+  var npc;
   for (npc in npcs){
     if (hasFunction(npcs[npc], 'update')){
       npcs[npc].update();

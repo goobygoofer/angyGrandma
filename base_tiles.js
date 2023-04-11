@@ -60,7 +60,8 @@ baseTiles = {//redo entirely and in order
     "deskCRV4":[112,1264],
     "redX":[288,751],//this one was weird
     "redDownArrow":[96,640],
-    "glasspane1":[160,560]
+    "glasspane1":[160,560],
+    "cloud":[240,736]
   }
 
   npcTiles = {
@@ -102,6 +103,12 @@ baseTiles = {//redo entirely and in order
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "cloud":{
+        "name":"cloud",
+        "sprite":baseTiles["cloud"],
+        "type":"object",
+        "collision":false
     },
     "glasspane1":{
         "name":"glasspane1",
