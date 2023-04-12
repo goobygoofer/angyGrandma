@@ -75,7 +75,7 @@ function drawStats(){
     ctx.fillRect(0, 225, 125, 55);
     ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
     ctx.fillStyle="white";
-    ctx.fillText("health       : " + player.skills['health']['health'], 25,240);
+    ctx.fillText("health       : " + player.skills['health']['health'] + "/" + player.skills.health.max, 25,240);
     ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 25,250);
     ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 25, 260);
     ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 270);
