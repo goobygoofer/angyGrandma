@@ -766,6 +766,8 @@ player.holding = player.inventory[0];
 
 //save map to local storage
 function saveToLocal(){//now only runs if player clicks button
+  let row;
+  let col;
   for (row in tile_map){
     for (col in tile_map[row]){
       tile_map[row][col].objects=filterObjByKeyVal(tile_map[row][col].objects, "type", "npc");
