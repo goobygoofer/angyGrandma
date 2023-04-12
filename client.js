@@ -51,10 +51,13 @@ function toggleMap(){
 
 function drawStats(){
   if (!showStats){return;};
+  ctx.fillStyle="black";
+  ctx.fillRect(0, 225, 125, 55);
   ctx.fillStyle="white";
-  ctx.fillText("health: " + player.skills['health']['health'], 0,240);
-  ctx.fillText("walking xp: " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 0,250);
-  ctx.fillText("strength xp: " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 0, 260);
+  ctx.fillText("health       : " + player.skills['health']['health'], 0,240);
+  ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 0,250);
+  ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 0, 260);
+  ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 0, 270);
 }
 
 var game_object_ids = [];
@@ -69,7 +72,7 @@ function mapSign(){
 }//the fact that any map sprite you place works is probably going to be a bug later on... heheh
 game_objects.push(new mapSign());
 //sound stuff//////////////////////////////////////////////////////////////////////////
-
+const chop = new Audio('chop.mp3');
 const hit_sound = new Audio('hit.mp3');
 const skele_die_sound = new Audio('skele_die.mp3');
 const rain_sound = new Audio('rain.mp3');
@@ -134,7 +137,9 @@ dropdown.addEventListener("change",function(){
   //console.log(selectedTile)
   objectToPlace=gameObjects[selectedTile];
   sprtCtx.clearRect(0,0,16,16);
-  sprtCtx.drawImage(spriteSheet, baseTiles[selectedTile][0],baseTiles[selectedTile][1], 16,16,
+  //sprtCtx.drawImage(spriteSheet, baseTiles[selectedTile][0],baseTiles[selectedTile][1], 16,16,
+  //  0, 0, 16,16);
+  sprtCtx.drawImage(spriteSheet, objectToPlace.sprite[0],objectToPlace.sprite[1], 16,16,
     0, 0, 16,16);
 })
 
@@ -258,7 +263,13 @@ function Player(){
     "walking":{"xp":0,"lvl":1},
     "strength":{"xp":0,"lvl":1},
     "health":{"xp":0,"health":100,"max":100, "lvl":1},
-    "playerLvl":1
+    "playerLvl":1,
+    "woodcutting":{"xp":0,"lvl":1}
+  };
+  this.inventory = [];
+  this.holding={
+    "name":"nothing",//empty handed this is default, would use from spriteData, but nothing has no spriteData
+    "itemObj":null,//remove item object from inventory and put it here
   };
   this.update = function(){
     if (nextToFire()){
@@ -287,9 +298,13 @@ function Player(){
       } else {
         this.checkLevelUp(this.skills['health'], true);
         }
-      }
     }
-  this.inventory = [];
+  }
+  this.equip = function(itemID){//if item equipped, unequip it. if not equipped, equip it.
+                              //if item equipped and equipping a different item, switch it.
+                              //item 
+    console.log(itemID);
+  }
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
     localStorage['playerStats']=JSON.stringify(this.skills);
@@ -311,7 +326,11 @@ function Player(){
     }
   }
   this.attack = function(target){
-    target.getAttacked(this.skills.strength.lvl);
+    let bonus = 0;
+    if (this.holding.name!=="nothing"){
+      bonus = this.holding.itemObj.attBonus;
+    }
+    target.getAttacked(this.skills.strength.lvl + bonus);
     hit_sound.play();
   }
   this.getAttacked = function(damage){
@@ -342,6 +361,9 @@ var playerStats = localStorage.getItem("playerStats");
 if (playerStats!==null){
   player.skills=JSON.parse(playerStats);
   playerStats=null;
+  if (player.skills.woodcutting===undefined){
+    player.skills['woodcutting']={"xp":0,"lvl":1}
+  }
 }
 
 var ghostR = [48,80];//ghost facing right coords
@@ -388,20 +410,36 @@ function interactNPC(nextX, nextY){
   }
 }
 
+//
+var itemInteractObjs = {'tree':'axe'};//need base tile interact objs too? like in case of rock///////////////////////PICKAXE NOTE
 function interactObject(nextX, nextY){
-  var object;
+  let object;
+  let interacted = false;
   for (object in tile_map[nextX][nextY].objects){
-    if (tile_map[nextX][nextY].objects[object].type==="object"){
-      let npcid = tile_map[nextX][nextY].objects[object].id//[0].id;
-      var targetNPC;
-      targetNPC=filterObjById(game_objects, npcid)[0];
-      if (hasFunction(targetNPC, "playerInteract")){
-        targetNPC.playerInteract();
+    if (tile_map[nextX][nextY].objects[object].type==="object"){// && tile_map[nextX][nextY].objects[object].id!=undefined){
+      let npcid = tile_map[nextX][nextY].objects[object].id;//[0].id;
+      var targetObj;
+      targetObj=filterObjById(game_objects, npcid)[0];
+      if (hasFunction(targetObj, "playerInteract")){
+        targetObj.playerInteract();
+        interacted = true;
+      }
+    }
+    //object is tree, other tile object that is gettable with held item or inv item
+    if (!interacted){
+      if (itemInteractObjs[tile_map[nextX][nextY].objects[object].name]!==undefined){
+        //it is a tree or other item interactable obj
+        if (player.holding.name === itemInteractObjs[tile_map[nextX][nextY].objects[object].name]){
+          //do thing with obj
+          player.holding.itemObj.action(nextX, nextY);
+        }
       }
     }
   }
-
 }
+
+
+
 
 function interactNext(nextX, nextY){
   if (master_collision===true){
@@ -493,6 +531,11 @@ function drawPlayer(){
     if (playerY>10){drawPointY=10} else{drawPointY=playerY}
     ctx.drawImage(spriteSheet, ghostLoc[0],ghostLoc[1], 16,16,
         drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16,16);
+    //then draw any items player is wearing/holding, probably wearing first
+    if (player.holding.name!=="nothing"){
+      ctx.drawImage(spriteSheet, player.holding.itemObj.spriteData.holdSprite[ghostFacing][0], player.holding.itemObj.spriteData.holdSprite[ghostFacing][1],
+        16,16, drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
+    }
 }
 
 var objectToPlace=gameObjects['rock'];
@@ -511,6 +554,77 @@ function resetTile(){
   tile_map[playerX][playerY]['objects']=[];
   tile_map[playerX][playerY]['sprite']=gameObjects['grass'];
 }
+
+//player objects testing///////////////////////////////////////////////////
+var regenObjects = [];//{"name":"tree", "coords":[10,10]} would get turned from stump into tree, scoured earth to rock, etc
+var looseObjects = [];//items laying around the world, ex)player drops axe, copy spriteData
+                      //                                  copy to looseObjects
+                      //                                  delete from player inventory 
+                      //                                  add spriteData to tile_map[playerX][playerY]
+                      //                                  player pick up item, Axe object has .x .y
+                      //                                  axes removes self from tile_map[x][y]
+                      //                                  copy object to player inventory
+                      //                                  remove object from looseObjects (by id?)
+function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
+  this.spriteData = JSON.parse(JSON.stringify(playerObjects['axe']));
+  this.spriteData.id = generateID();
+  this.attBonus = 2;//add 2 to player attack if held
+  this.isHeld = false;//for object in player.equippedItems with isHeld === true, draw with player (this goes in Player fxn)
+                      //in Player interactNext, if tree, check holding axe
+                      //then player's held axe object.do thing to object from interactNext
+                      //player needs equip/unequip/switch fxn
+                      //             pick up/drop fxn
+                      //             -put spriteData on tile on drop, need looseItems list for actual item object
+                      //             on drop, timer goes off to permanently delete item to prevent buildup
+                      //             not all items like this?
+                      //
+  this.onGround = false;//otherwise it is in player inv
+  //this fxn called in interactNext
+  this.action = function(x, y){//, object_name){//for chopping trees, attack is just a bonus to melee. could add attack type?
+    //at this point, need to prevent multiple of same type in objects, for now just keep in mind it is a bug
+    //tile_map[x][y], find object with object_name, add log obj to inventory, replace obj with stump1 sprite data
+    //    logs need to stack. don't necessarily need their own object like this
+    //    is obvious what it is as spriteData for displaying in inv and on tile (dropped),
+    //    when in inventory, it would be like: playerInv >>> ["logs":{"amt":10, "spriteData":baseTiles['log']}]
+    //    when dropping a log, -1 from player inventory, place sprite on tile it is dropped on
+    //    no need for ids, unnecessary objects
+    //    for chopped trees:
+    //        setInterval to check tiles with stumps on them
+    //        random chance to respawn so they don't all respawn at once
+    //        or when chopped, coords and type added to list, 
+    //        setInterval checks that list, if respawn, del from list, replace tree tile
+    let object;
+    let chopped = false;
+    let invPos;
+    for (object in tile_map[x][y].objects){
+      if (tile_map[x][y].objects[object].name==='tree'){
+        chop.play();
+        if (player.skills.woodcutting.lvl>=Math.floor(Math.random()*25)){
+          player.incrementSkill('woodcutting', 1);
+          if (player.inventory.find(obj => obj.name === 'logs')){
+            //player.inventory['logs'].amt +=1;
+            invPos = player.inventory.findIndex(obj => obj.name ==='logs');
+            player.inventory[invPos].amt += 1;
+          } else {
+            //player.inventory['logs']=1;//initializes logs in inventory
+            player.inventory.push({'name':'logs', 'amt':1})
+          }
+          //remove tree sprite from tile, replace with stump1 sprite
+          //add {'name':'tree', 'coords':[x, y]} to regenObjects
+          //delete tile_map[x][y].objects[object];
+          tile_map[x][y].objects.splice(object,1);
+          tile_map[x][y].objects.push(gameObjects['stump1']);
+          regenObjects.push({'name':'tree', 'coords':[x,y]});
+          break;
+        }
+      }
+    }
+    //uh oh, just note that pickaxe will have to interact with base-tile and not tile objects!//////////////////////PICKAXE NOTE
+  }
+}
+player.inventory.push({"name":"axe", "itemObj":new Axe})
+player.holding = player.inventory[0];
+//end player objects testing///////////////////////////////////////////////
 
 //end player setup///////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -693,6 +807,9 @@ function Spider(){
   this.aggro = false;
   this.lastAggro=Date.now();
   this.aggroRange = 10;
+  this.reposition = false;
+  this.reposCount = 0;
+  
   this.update = function(){
     if (this.x===playerX && this.y===playerY){
       player.getAttacked(this.strength);//need to change to random
@@ -706,7 +823,8 @@ function Spider(){
     if (now > this.lastTime+restTime){
       this.lastTime=now;
       //check distance to player
-      if (distToPlayer(this.x, this.y)<=this.aggroRange){
+      let dToPlayer = distToPlayer(this.x, this.y);
+      if (dToPlayer){//distToPlayer(this.x, this.y)<=this.aggroRange){
         this.aggro=true;
         this.lastAggro=Date.now();
       } else {
@@ -741,6 +859,84 @@ function Spider(){
       tile_map[this.x][this.y].objects.push(this.spriteData)
     }
   }
+  
+  /*
+  this.update = function(){
+    if (this.x===playerX && this.y===playerY){
+      player.getAttacked(this.strength);//need to change to random
+    }
+    if (this.hp<1){
+      skele_die_sound.play();
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
+    let now = Date.now();
+    let restTime = Math.floor(Math.random()*this.delay);
+    if (now > this.lastTime+restTime){
+      this.lastTime=now;
+      //check distance to player
+      let dToPlayer = distToPlayer(this.x, this.y);
+      if (dToPlayer<=this.aggroRange){//distToPlayer(this.x, this.y)<=this.aggroRange){
+        if (dToPlayer === this.lastDToPlayer) {
+          this.dToPlayerCounter++;
+          if (this.dToPlayerCounter >= 3) {
+            // dToPlayer has remained the same for 10 iterations
+            console.log("dToPlayer has not changed for 3 iterations");
+            this.reposition=true;
+            this.dToPlayerCounter = 0;
+          }
+        } else {
+          // dToPlayer has changed, reset counter
+          this.dToPlayerCounter = 0;
+        }
+        this.lastDToPlayer = dToPlayer;
+        this.aggro=true;
+        this.lastAggro=Date.now();
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+      var newCoords=null;
+      if (!this.aggro){
+        newCoords=moveNPC(this.x,this.y);//returns x,y
+      } else {
+        if (this.reposition===true){
+          if (this.reposCount<=250){
+            this.reposition=false;
+            this.aggro=false;
+            this.reposCount+=1;
+          } else {
+            this.reposition=false;
+            this.aggro=false;
+            this.reposCount=0;
+          } 
+          newCoords=moveNPC(this.x,this.y);//returns x,y
+        } else {
+          var trackCoords = trackPlayer(this.x, this.y);
+          newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+        }
+        if (checkCollision(newCoords[0], newCoords[1])===true){
+          newCoords=[this.x, this.y, "right"];
+        }
+      }
+      
+      if (!isOneUnitAway(this.x, this.y, newCoords[0], newCoords[1])){
+        //don't
+        newCoords=[this.x, this.y, "right"];//messy but should work
+      }
+      
+      //remove self from current tile
+      if (newCoords[2]!==null){
+        this.spriteData.facing=newCoords[2];
+      }
+      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
+      this.x=newCoords[0];
+      this.y=newCoords[1];
+      //add self to new tile
+      tile_map[this.x][this.y].objects.push(this.spriteData)
+    }
+  }
+  */
   this.getAttacked = function(damage){
     this.hp-=damage;
     player.incrementSkill("strength", 5);

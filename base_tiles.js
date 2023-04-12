@@ -61,7 +61,10 @@ baseTiles = {//redo entirely and in order
     "redX":[288,751],//this one was weird
     "redDownArrow":[96,640],
     "glasspane1":[160,560],
-    "cloud":[240,736]
+    "cloud":[240,736],
+    "axeR":[0,192],
+    "axeL":[272,192],
+    "axeItem":[64,64]
   }
 
   npcTiles = {
@@ -75,6 +78,17 @@ baseTiles = {//redo entirely and in order
     "spiderL":[112, 240]
   }
 
+playerObjects = {
+    //separate so user can't place items?
+    //prob start with axe
+    "axe":{
+        "name":"axe",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['axeL'], "rt":baseTiles['axeR']},//not all have this
+        "itemSprite":baseTiles['axeItem'],//all should have this. only drawn if on ground or inv showing
+       // "wear":["hand", true],//all have this, if no wear, set to [null, false]?
+    }
+}
   gameObjects = {
     "spider":{
         "name":"spider",
@@ -307,7 +321,7 @@ baseTiles = {//redo entirely and in order
         "name":"stump1",
         "sprite":baseTiles['stump1'],
         "type":"object",
-        "collision":true,
+        "collision":false,
     },
     "campfire":{
         "name":"campfire",
