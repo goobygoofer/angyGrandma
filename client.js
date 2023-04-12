@@ -1,8 +1,25 @@
 "use strict";
-//debug stuffsT
+//debug stuffs
+function mute(){
+  if (muteSound===true){
+    muteSound=false;
+  } else {
+    muteSound=true;
+  }
+}
+
+//fillStyle, fillText, text, x,y
+let death = false;
 function deathScreen(){
-  ctx.fillStyle='black';
+  death = true;
+  ctx.fillStyle='rgb(255,0,0,0.1)';
   ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='rgb(0,0,0,0.5)';
+  ctx.font = '24px Arial';
+  ctx.fillText("GAME OVER", 75,150)
+  ctx.font = '10px Arial';
+  ctx.fillText("(you were ejected from the valley)", 75, 175);
+
   //working on this
 }
 
@@ -50,14 +67,19 @@ function toggleMap(){
 }
 
 function drawStats(){
-  if (!showStats){return;};
-  ctx.fillStyle="black";
+  if (!showStats){
+    ctx.drawImage(spriteSheet, baseTiles['statDisp'][0], baseTiles['statDisp'][1], 16,16, 0,225, 25,25);
+    return;
+  };
+  ctx.fillStyle="rgba(139, 69, 19, 0.5)";
+  ctx.font = '10px Arial';
   ctx.fillRect(0, 225, 125, 55);
+  ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
   ctx.fillStyle="white";
-  ctx.fillText("health       : " + player.skills['health']['health'], 0,240);
-  ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 0,250);
-  ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 0, 260);
-  ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 0, 270);
+  ctx.fillText("health       : " + player.skills['health']['health'], 25,240);
+  ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 25,250);
+  ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 25, 260);
+  ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 270);
 }
 
 var game_object_ids = [];
@@ -156,6 +178,10 @@ document.addEventListener('keydown', (event) => {
   }
   timerId = setTimeout(() => {
     switch (event.key) {
+      case 'f':
+      case 'F':
+        player.equip();
+        break;
       case ' ':
         placeTile(objectToPlace);
         break;
@@ -192,7 +218,7 @@ document.getElementById('saveButton').addEventListener('click', () => saveToLoca
 document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
 document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
-document.getElementById('statsButton').addEventListener('click', () => toggleStats());
+//document.getElementById('statsButton').addEventListener('click', () => toggleStats());
 
 function isTopLeftClicked(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
@@ -201,12 +227,65 @@ function isTopLeftClicked(event, uicanvas){
   return x < 25 && y < 25;
 }
 
+function clickedStatToggle(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x < 25 && y < 240 && y > 225;
+}
+
+function clickInvDown(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x > 275 && y < 280 && y > 260;
+}
+
+function clickInvUp(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x > 275 && y < 240 && y > 220;
+}
+
+function clickEquip(event, uicanvas){//crap these all could prob be same function lol
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x >=250 && x <= 260 && y>= 245 && y <= 261;
+}
+
+function invScroll(dir){//not accounting for dropped items? on item drop, reset player.invPosition to zero or?
+  let tempPos=player.invPosition+dir;
+  if (tempPos===-1){
+    player.invPosition=player.inventory.length-1;
+  }
+  else if (tempPos>=player.inventory.length){
+    player.invPosition=0;
+  } else {
+    player.invPosition=tempPos;
+  }
+  console.log(player.invPosition + "(" + dir + ")");
+}
+
 canvas.addEventListener('click', event => {
   if (isTopLeftClicked(event, canvas)){
     if (bigMap){
       toggleMap();
     }
-    console.log("clicked top left corner");
+  }
+  if (clickedStatToggle(event, canvas)){
+    toggleStats();
+  }
+  //temporary inventory scroller
+  if (clickInvUp(event, canvas)){
+    invScroll(-1);//next inventory item (-1)
+  }
+  if (clickInvDown(event, canvas)){
+    invScroll(1);//next inv item (+1)
+  }
+  if (clickEquip(event, canvas)){
+    player.equip();
   }
 });
 
@@ -216,6 +295,19 @@ canvas.addEventListener('touchend', event => {
       toggleMap();
     }
     console.log("user touched top left corner");
+  }
+  if (clickedStatToggle(event.touches[0], canvas)){
+    toggleStats();
+  }
+  //temporary inventory scroller
+  if (clickInvUp(event.touches[0], canvas)){
+    invScroll(-1);//next inventory item (-1)
+  }
+  if (clickInvDown(event.touches[0], canvas)){
+    invScroll(1);//next inv item (+1)
+  }
+  if (clickEquip(event.touches[0], canvas)){
+    player.equip();
   }
 });
 
@@ -267,6 +359,7 @@ function Player(){
     "woodcutting":{"xp":0,"lvl":1}
   };
   this.inventory = [];
+  this.invPosition = 0;//first item in inventory
   this.holding={
     "name":"nothing",//empty handed this is default, would use from spriteData, but nothing has no spriteData
     "itemObj":null,//remove item object from inventory and put it here
@@ -288,7 +381,7 @@ function Player(){
         this.skills.health['health']=this.skills.health.max;
         localStorage['playerStats']=JSON.stringify(this.skills);
         deathScreen();
-        setTimeout(location.reload(),3000);
+        setTimeout(() => {location.reload();},3000);
       }
     }
     var skill;
@@ -300,10 +393,19 @@ function Player(){
         }
     }
   }
-  this.equip = function(itemID){//if item equipped, unequip it. if not equipped, equip it.
+  this.equip = function(){//if item equipped, unequip it. if not equipped, equip it.
                               //if item equipped and equipping a different item, switch it.
                               //item 
-    console.log(itemID);
+    let itemObject = player.inventory[player.invPosition].itemObj;
+    console.log(itemObject);
+    //equip, unequip or switch current item if itemObject.equippable!==undefined
+    if (itemObject===player.holding.itemObj){
+      //unequip
+      player.holding={"name":"nothing", "itemObj":null};
+    }
+    else if (player.holding.name==="nothing" && itemObject.equippable===true){
+      player.holding={"name":itemObject.spriteData.name, "itemObj":itemObject};
+    }
   }
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
@@ -538,6 +640,27 @@ function drawPlayer(){
     }
 }
 
+function drawInv(){
+  if (player.inventory.length===0){
+    //draw x for inv item
+    ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16,
+      275,240, 20,20)
+  } else {
+    //draw inventory position
+    ctx.drawImage(spriteSheet, player.inventory[player.invPosition].itemObj.spriteData.itemSprite[0], player.inventory[player.invPosition].itemObj.spriteData.itemSprite[1], 16,16
+      ,275,240, 20,20);
+  }
+  //draw arrows baseTile['upArrow'/'downArrow']
+  ctx.drawImage(spriteSheet, baseTiles['upArrow'][0], baseTiles['upArrow'][1], 16,16
+    ,260,210, 50,40);
+  ctx.drawImage(spriteSheet, baseTiles['downArrow'][0], baseTiles['downArrow'][1], 16,16
+    ,262,250, 50,40);
+
+  //draw equip button, need to change function to check .equipTo (i.e. holding, wearing, footwear, etc)
+  ctx.drawImage(spriteSheet, baseTiles['F'][0], baseTiles['F'][1], 16,16,
+    250,245, 16,16);
+}
+
 var objectToPlace=gameObjects['rock'];
 
 function placeTile (objToPlace){
@@ -566,6 +689,7 @@ var looseObjects = [];//items laying around the world, ex)player drops axe, copy
                       //                                  copy object to player inventory
                       //                                  remove object from looseObjects (by id?)
 function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
+  this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['axe']));
   this.spriteData.id = generateID();
   this.attBonus = 2;//add 2 to player attack if held
@@ -607,7 +731,7 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
             player.inventory[invPos].amt += 1;
           } else {
             //player.inventory['logs']=1;//initializes logs in inventory
-            player.inventory.push({'name':'logs', 'amt':1})
+            player.inventory.push({'name':'logs', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
           }
           //remove tree sprite from tile, replace with stump1 sprite
           //add {'name':'tree', 'coords':[x, y]} to regenObjects
@@ -796,7 +920,7 @@ function isOneUnitAway(x1, y1, x2, y2){
 var npcs=[];//npc's in game, {"[id]":npc_object}
 function Spider(){
   this.name="spider";
-  this.hp = 5;
+  this.hp = 10;
   this.strength = 2;
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['spider']));
   this.spriteData.id=null;
@@ -809,7 +933,7 @@ function Spider(){
   this.aggroRange = 10;
   this.reposition = false;
   this.reposCount = 0;
-  
+  /*
   this.update = function(){
     if (this.x===playerX && this.y===playerY){
       player.getAttacked(this.strength);//need to change to random
@@ -859,8 +983,8 @@ function Spider(){
       tile_map[this.x][this.y].objects.push(this.spriteData)
     }
   }
+  */
   
-  /*
   this.update = function(){
     if (this.x===playerX && this.y===playerY){
       player.getAttacked(this.strength);//need to change to random
@@ -936,7 +1060,7 @@ function Spider(){
       tile_map[this.x][this.y].objects.push(this.spriteData)
     }
   }
-  */
+  
   this.getAttacked = function(damage){
     this.hp-=damage;
     player.incrementSkill("strength", 5);
@@ -1057,7 +1181,7 @@ setInterval(function(){
   if (countObjectsByPropertyValue(npcs, "name", "spider")<20){
       let newSpide = new Spider;//should work without changing newSkeles lol
       newSpide.spriteData.id=generateID();
-      console.log(newSpide.spriteData.id);
+      //console.log(newSpide.spriteData.id);
       let coords_ok;
       coords_ok=false;
       do {
@@ -1093,7 +1217,7 @@ setInterval(function(){
   if (countObjectsByPropertyValue(npcs, "name", "skeleton")<45){
       let newSkele = new Skeleton;
       newSkele.spriteData.id=generateID();
-      console.log(newSkele.spriteData.id);
+      //console.log(newSkele.spriteData.id);
       var coords_ok;
       coords_ok=false;
       do {
@@ -1135,7 +1259,7 @@ setInterval(function(){
   if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
       let newRat = new Rat;
       newRat.spriteData.id=generateID();
-      console.log(newRat.spriteData.id);
+      //console.log(newRat.spriteData.id);
       var coords_ok=false;
       do {
         newRat.x=Math.floor(Math.random()*80);
@@ -1267,19 +1391,24 @@ function updateNPCs(){
 
 function update(){
   //game logic here
-  ctx.clearRect(0,0,300,300);
-  //uddate player
-  updateNPCs();
-  player.update();
-  if (!bigMap){
-    let disp_area=getDispArea();
-    drawMap(disp_area);
-    drawPlayer();
+  if (!death){
+    ctx.clearRect(0,0,300,300);
+    //uddate player
+    updateNPCs();
+    player.update();
+    if (!bigMap){
+      let disp_area=getDispArea();
+      drawMap(disp_area);
+      drawPlayer();
+    } else {
+      let disp_area=drawBigMap();
+      drawMap(disp_area);
+    }
+    drawStats();
+    drawInv();//testing until better inv UI
   } else {
-    let disp_area=drawBigMap();
-    drawMap(disp_area);
+    deathScreen();
   }
-  drawStats();
 }
 
 setInterval(update,100);//or update only when user moves or places a tile, need to add modes

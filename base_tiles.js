@@ -64,7 +64,14 @@ baseTiles = {//redo entirely and in order
     "cloud":[240,736],
     "axeR":[0,192],
     "axeL":[272,192],
-    "axeItem":[64,64]
+    "axeItem":[64,64],
+    "statDisp":[80, 624],
+    "log":[96, 0],
+    "upArrow":[80,976],
+    "downArrow":[96, 976],
+    //letters here
+    "F":[80,768]
+    //end letters
   }
 
   npcTiles = {
@@ -117,6 +124,13 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "log":{
+        "name":"log",
+        "sprite":baseTiles["log"],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles["log"]//redundant but will work? for inventory drawing ease
     },
     "cloud":{
         "name":"cloud",
