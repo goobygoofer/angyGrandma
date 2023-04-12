@@ -69,17 +69,25 @@ function toggleMap(){
 function drawStats(){
   if (!showStats){
     ctx.drawImage(spriteSheet, baseTiles['statDisp'][0], baseTiles['statDisp'][1], 16,16, 0,225, 25,25);
-    return;
-  };
-  ctx.fillStyle="rgba(139, 69, 19, 0.5)";
-  ctx.font = '10px Arial';
-  ctx.fillRect(0, 225, 125, 55);
-  ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
-  ctx.fillStyle="white";
-  ctx.fillText("health       : " + player.skills['health']['health'], 25,240);
-  ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 25,250);
-  ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 25, 260);
-  ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 270);
+  } else {
+    ctx.fillStyle="rgba(139, 69, 19, 0.5)";
+    ctx.font = '10px Arial';
+    ctx.fillRect(0, 225, 125, 55);
+    ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
+    ctx.fillStyle="white";
+    ctx.fillText("health       : " + player.skills['health']['health'], 25,240);
+    ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 25,250);
+    ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 25, 260);
+    ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 270);
+  }
+  //draw hp bar:
+  ctx.fillStyle="rgba(255,0,0,0.5)";
+  ctx.fillRect(10,280, 255, 5);
+  ctx.fillStyle="rgba(0,255,100,1)"
+  let greenBar = (player.skills.health.health/player.skills.health.max) * 225;
+  ctx.fillRect(10,280, greenBar, 5)
+  ctx.drawImage(spriteSheet, baseTiles['hpIcon'][0], baseTiles['hpIcon'][1], 16, 16,
+    0,270, 25, 25);
 }
 
 var game_object_ids = [];

@@ -69,6 +69,7 @@ baseTiles = {//redo entirely and in order
     "log":[96, 0],
     "upArrow":[80,976],
     "downArrow":[96, 976],
+    "hpIcon":[160,832],
     //letters here
     "F":[80,768]
     //end letters
