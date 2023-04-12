@@ -84,7 +84,7 @@ function drawStats(){
   ctx.fillStyle="rgba(255,0,0,0.5)";
   ctx.fillRect(10,280, 255, 5);
   ctx.fillStyle="rgba(0,255,100,1)"
-  let greenBar = (player.skills.health.health/player.skills.health.max) * 225;
+  let greenBar = (player.skills.health.health/player.skills.health.max) * 255;
   ctx.fillRect(10,280, greenBar, 5)
   ctx.drawImage(spriteSheet, baseTiles['hpIcon'][0], baseTiles['hpIcon'][1], 16, 16,
     0,270, 25, 25);
@@ -649,6 +649,8 @@ function drawPlayer(){
 }
 
 function drawInv(){
+  ctx.fillStyle = "rgba(139, 69, 19, 0.5)";
+  ctx.fillRect(275, 240, 20,20);
   if (player.inventory.length===0){
     //draw x for inv item
     ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16,
@@ -1363,6 +1365,8 @@ function drawMap(disp_area){
               sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite'][npcFacing];
               ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
                 col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
+              //then draw health? get npc by id, get health, draw at sprtLoc[0], sprtLoc[1], to sprtLoc[0]+16, sprtLoc[1]+5
+              //draw red line, then green line (health/max) * 16
             } else {
               //remove the objectless sprite!
               delete tile_map[sprtX][sprtY]['objects'][object];
