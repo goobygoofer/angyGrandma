@@ -95,17 +95,18 @@ function drawStats(){
 //except for map, this is way too messy and broken for life rn, shelve until pruned////////////////////////HEY ASSHOLE
 var game_object_ids = [];
 var game_objects = [];//maybe npc and object ids all go in game_obj_ids, but npcs and game_objects still separate? idk
-function mapSign(){
+function mapSign(x, y){
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['mapsign']));
   this.spriteData.id=generateID();
   game_object_ids.push(this.spriteData.id);
+  tile_map[x][y].objects.push(this.spriteData);
   this.playerInteract=function(){
     console.log("toggling map");
     console.log(this.spriteData.id);
     toggleMap();
   }
 }//the fact that any map sprite you place works is probably going to be a bug later on... heheh
-game_objects.push(new mapSign());
+
 
 function Lootbag(name, x, y){//dead spider's x,y. add this on death
   //name is from what dropped it, determines what goes in bag
@@ -196,9 +197,21 @@ spriteSheet.src = 'spritesheet-0.5.18.png';
 ////////////////////////////////////////////////////////////////////////END NEW UI TESTING REMOVE IF IT SUCKS
 
 //get user previous map from local storage
+var functionObjs={"mapsign":mapSign}
 var myData = localStorage.getItem("userMap");
 if (myData!==null){
   tile_map=JSON.parse(myData);//otherwise tile_map is just default from file
+  let row, col, obj;
+  for (row in tile_map){
+    for (col in tile_map[row]){
+      for (obj in tile_map[row][col].objects){
+        if (tile_map[row][col].objects[obj].name in functionObjs){
+          //reconstitute le object
+          game_objects.push(new functionObjs[tile_map[row][col].objects[obj].name](row, col));
+        }
+      }
+    }
+  }
   myData=null;//otherwise you've got 2 tile maps? 
 }
 
@@ -796,11 +809,19 @@ function drawInv(){
 }
 
 var objectToPlace=gameObjects['rock'];
+//var functionObjs = {"mapsign":mapSign}
 
 function placeTile (objToPlace){//now need to account for objects like mapsign, 
                                 //game_objects.push(new mapSign(x,y))
   if (objToPlace.type==='object'){
-    tile_map[playerX][playerY].objects.push(objectToPlace);
+    if (objToPlace.name in functionObjs){
+      //place it like an object
+      game_objects.push(new mapSign(playerX, playerY));
+    } else {
+      //just place it as spriteData
+      tile_map[playerX][playerY].objects.push(objectToPlace);
+    }
+
   }
   if (objToPlace.type==='base-tile'){
     tile_map[playerX][playerY]['sprite']=objectToPlace;
@@ -883,12 +904,22 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
 function saveToLocal(){//now only runs if player clicks button
   let row;
   let col;
-  for (row in tile_map){
-    for (col in tile_map[row]){
-      tile_map[row][col].objects=filterObjByKeyVal(tile_map[row][col].objects, "type", "npc");
+  let ttile_map=JSON.parse(JSON.stringify(tile_map));
+  for (row in ttile_map){
+    for (col in ttile_map[row]){
+      ttile_map[row][col].objects=filterObjByKeyVal(ttile_map[row][col].objects, "type", "npc");
+      let obj;
+      for (obj in ttile_map[row][col].objects){
+        //if tile_map[row][col].objects[obj].name in functionObjs
+        //do thing like saving inventory
+        //remake obj on map recreation
+        if (ttile_map[row][col].objects[obj].name in functionObjs){
+          ttile_map[row][col].objects[obj]={"name":"mapsign"}
+        }
+      }
     }
   }
-  localStorage.setItem("userMap", JSON.stringify(tile_map));
+  localStorage.setItem("userMap", JSON.stringify(ttile_map));
   console.log("saved to local...")
 }
 
