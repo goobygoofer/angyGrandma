@@ -70,6 +70,12 @@ baseTiles = {//redo entirely and in order
     "upArrow":[80,976],
     "downArrow":[96, 976],
     "hpIcon":[160,832],
+    "string":[80,240],//probably another object like logs where no actual object (like Axe), just inv obj and sprite obj
+    "fPoleR":[0,496],
+    "fPoleL":[16,495],
+    "fPole":[288,480],
+    "craftTable":[192,528],//just this for now as a click point
+    "lootbag":[192,240],
     //letters here
     "F":[80,768]
     //end letters
@@ -87,7 +93,7 @@ baseTiles = {//redo entirely and in order
   }
 
 playerObjects = {
-    //separate so user can't place items?
+    //separate so user can't place items via place tile?
     //prob start with axe
     "axe":{
         "name":"axe",
@@ -95,6 +101,12 @@ playerObjects = {
         "holdSprite":{"lt":baseTiles['axeL'], "rt":baseTiles['axeR']},//not all have this
         "itemSprite":baseTiles['axeItem'],//all should have this. only drawn if on ground or inv showing
        // "wear":["hand", true],//all have this, if no wear, set to [null, false]?
+    },
+    "fishingpole":{
+        "name":"fishingpole",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['fPoleL'], "rt":baseTiles['fPoleR']},
+        "itemSprite":baseTiles['fPole']
     }
 }
   gameObjects = {
@@ -125,6 +137,22 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "lootbag":{
+        "name":"lootbag",
+        "id":null,
+        "sprite":baseTiles["lootbag"],
+        "type":"object",
+        "collision":true,//so player can interact with it? .action?
+        "itemSprite":baseTiles["lootbag"]
+    },
+    "string":{
+        //comes out of a spiders BUTT
+        "name":"string",
+        "sprite":baseTiles["string"],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles["string"]//maybe if no item sprite just use sprite?
     },
     "log":{
         "name":"log",

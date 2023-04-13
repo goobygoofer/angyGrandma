@@ -1,4 +1,6 @@
 "use strict";
+//useful global variables for stuff we don't need to type over and over
+
 //debug stuffs
 function mute(){
   if (muteSound===true){
@@ -8,7 +10,6 @@ function mute(){
   }
 }
 
-//fillStyle, fillText, text, x,y
 let death = false;
 function deathScreen(){
   death = true;
@@ -82,14 +83,16 @@ function drawStats(){
   }
   //draw hp bar:
   ctx.fillStyle="rgba(255,0,0,0.5)";
-  ctx.fillRect(10,280, 255, 5);
+  ctx.fillRect(10,280, 115, 5);
   ctx.fillStyle="rgba(0,255,100,1)"
-  let greenBar = (player.skills.health.health/player.skills.health.max) * 255;
+  let greenBar = (player.skills.health.health/player.skills.health.max) * 115;
   ctx.fillRect(10,280, greenBar, 5)
   ctx.drawImage(spriteSheet, baseTiles['hpIcon'][0], baseTiles['hpIcon'][1], 16, 16,
     0,270, 25, 25);
 }
 
+//interactable objects////////////////////////////////////////////////////////////////////////////////////////////////
+//except for map, this is way too messy and broken for life rn, shelve until pruned////////////////////////HEY ASSHOLE
 var game_object_ids = [];
 var game_objects = [];//maybe npc and object ids all go in game_obj_ids, but npcs and game_objects still separate? idk
 function mapSign(){
@@ -97,10 +100,60 @@ function mapSign(){
   this.spriteData.id=generateID();
   game_object_ids.push(this.spriteData.id);
   this.playerInteract=function(){
+    console.log("toggling map");
+    console.log(this.spriteData.id);
     toggleMap();
   }
 }//the fact that any map sprite you place works is probably going to be a bug later on... heheh
 game_objects.push(new mapSign());
+
+function Lootbag(name, x, y){//dead spider's x,y. add this on death
+  //name is from what dropped it, determines what goes in bag
+  console.log(`${name} dropped a lootbag...`)
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['lootbag']));
+  this.spriteData.id = generateID();
+  game_object_ids.push(this.spriteData.id);//not necessary?
+  this.x=x;
+  this.y=y;
+  console.log(`x: ${this.x} y: ${this.y}`)
+  console.log(`id: ${this.spriteData.id}`)
+  console.log(`spriteData: ${JSON.stringify(this.spriteData)}`)
+  tile_map[playerX][playerY].objects.push(this.spriteData);
+  this.playerInteract=function(){
+    //put stuff in player inv and delete self
+    if (player.inventory.find(obj => obj.name === 'string')){
+      let invPos;
+      invPos = player.inventory.findIndex(obj => obj.name ==='string');
+      player.inventory[invPos].amt += 1;
+    } else {
+      player.inventory.push({'name':'string', 'amt':1, "itemObj":{"spriteData":gameObjects['string']}});
+    }
+    //remove from tile
+    let object;
+    let count=0;
+    for (object in tile_map[this.x][this.y].objects){
+      if (tile_map[this.x][this.y].objects[object].id === this.spriteData.id){
+        tile_map[this.x][this.y].objects.splice(count,1);
+        break;
+      }
+      count+=1;
+    }
+    //remove from game_objects
+    let game_obj;
+    let obj_count=0;
+    for (game_obj in game_objects){
+      if (game_objects[game_obj].spriteData.id===this.spriteData.id){
+        console.log("in here");
+        game_objects.splice(obj_count, 1);
+        break;
+      }
+      obj_count+=1;
+    }
+  }
+}
+//
+//////////////////////////////////////////////////////////////////////////////////////////////OBJECT INTERACTS BROKEN
+
 //sound stuff//////////////////////////////////////////////////////////////////////////
 const chop = new Audio('chop.mp3');
 const hit_sound = new Audio('hit.mp3');
@@ -130,14 +183,13 @@ function playRain(){
 //main canvas element
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-//ctx.globalAlpha=0.5;
 //to display example tile next to dropdown menu
 const sprtCanvas = document.getElementById('spriteCanvas');
 const sprtCtx = sprtCanvas.getContext('2d');
 //sprite sheet, 16px increments
 const spriteSheet = new Image();
 spriteSheet.src = 'spritesheet-0.5.18.png';
-BLOCKSIZE=16;//maybe not need this or shorten var name
+//BLOCKSIZE=16;//maybe not need this or shorten var name
 
 ////////////////////////////////////////////////////////////////////////NEW UI TESTING REMOVE IF SUCKS
 
@@ -152,32 +204,30 @@ if (myData!==null){
 
 //setup dropdown menu for base tiles
 const dropdown = document.getElementById('tile-dropdown');
-//console.log(dropdown)
 
-for (const key in gameObjects){//change to key in objects
+for (const key in gameObjects){
   if (gameObjects.hasOwnProperty(key)){
     const option = document.createElement("option");
-    option.text=key;// + " (" + gameObjects[key]['type'] + ")";
+    option.text=key;
     dropdown.append(option)
   }
 }
 
 dropdown.addEventListener("change",function(){
   const selectedTile = this.value;
-  //console.log(selectedTile)
   objectToPlace=gameObjects[selectedTile];
   sprtCtx.clearRect(0,0,16,16);
-  //sprtCtx.drawImage(spriteSheet, baseTiles[selectedTile][0],baseTiles[selectedTile][1], 16,16,
-  //  0, 0, 16,16);
   sprtCtx.drawImage(spriteSheet, objectToPlace.sprite[0],objectToPlace.sprite[1], 16,16,
     0, 0, 16,16);
 })
 
 // add arrow key listener for desktop users
 let timerId;
-var delay = 30; // delay time in milliseconds
+var delay = 30;
 
-document.addEventListener('keydown', (event) => {
+document.addEventListener('keydown', (event) => {//this doesn't work right
+                                                 //maybe make it playerLastMove=Date.now() check?
+                                                 //so no matter how many times it fires it's going on time
   if (event.target.nodeName==='SELECT') {
     return;
   }
@@ -226,7 +276,6 @@ document.getElementById('saveButton').addEventListener('click', () => saveToLoca
 document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
 document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
-//document.getElementById('statsButton').addEventListener('click', () => toggleStats());
 
 function isTopLeftClicked(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
@@ -256,12 +305,15 @@ function clickInvUp(event, uicanvas){
   return x > 275 && y < 240 && y > 220;
 }
 
-function clickEquip(event, uicanvas){//crap these all could prob be same function lol
+function clickEquip(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
   return x >=250 && x <= 260 && y>= 245 && y <= 261;
 }
+
+///ALL OF THESE COULD BE THE SAME FXN////////////////////////////////////////////////////////////////////////////REFACTOR
+//----
 
 function invScroll(dir){//not accounting for dropped items? on item drop, reset player.invPosition to zero or?
   let tempPos=player.invPosition+dir;
@@ -367,6 +419,7 @@ function Player(){
     "woodcutting":{"xp":0,"lvl":1}
   };
   this.inventory = [];
+  this.lastInventory = JSON.stringify(this.inventory);
   this.invPosition = 0;//first item in inventory
   this.holding={
     "name":"nothing",//empty handed this is default, would use from spriteData, but nothing has no spriteData
@@ -378,6 +431,12 @@ function Player(){
     } else {
       this.regenTime = 5000;
     }
+    
+    if (this.lastInventory !== JSON.stringify(this.inventory)){
+      this.lastInventory=JSON.stringify(this.inventory);
+      saveInventoryToLocal();
+    }
+    
     if (this.skills.health['health'] < this.skills.health['max']){
       if (this.skills.health['health'] > 0){// && Date.now() > this.lastTime+5000){
         //regen health
@@ -388,6 +447,7 @@ function Player(){
       } else {
         this.skills.health['health']=this.skills.health.max;
         localStorage['playerStats']=JSON.stringify(this.skills);
+        //localStorage['playerInv']=JSON.stringify(this.inventory)
         deathScreen();
         setTimeout(() => {location.reload();},3000);
       }
@@ -475,6 +535,51 @@ if (playerStats!==null){
     player.skills['woodcutting']={"xp":0,"lvl":1}
   }
 }
+//get inventory from local
+var pObjList = {
+  "axe":Axe,
+  //next here will be fishingpole
+}
+
+var playerInv = JSON.parse(localStorage.getItem("playerInv"));
+if (playerInv!=='undefined'){
+  console.log("not equal to null");
+  let tempInv = [];
+  let obj;
+  //loop and process into tempInv
+  for (obj in playerInv){
+    if (playerInv[obj].name in pObjList){
+      tempInv.push({"name":playerInv[obj].name, "itemObj":new pObjList[playerInv[obj].name]});
+    } else {
+      console.log("pushing regular item");
+      console.log(playerInv[obj]);
+      tempInv.push(playerInv[obj]);
+    }
+  }
+  player.inventory=tempInv;
+  tempInv=null;
+}
+
+if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="axe")){
+  player.holding={"name":"nothing", "itemObj":null};
+  player.inventory.push({"name":"axe", "itemObj":new Axe})
+}
+
+
+function saveInventoryToLocal(){
+  let saveList = [];
+  let obj;
+  for (obj in player.inventory){
+    if (player.inventory[obj].itemObj.spriteData.name in playerObjects){
+      //it an axe or fishing pole etc, see base_tiles.js/playerObjects
+      saveList.push({"name":player.inventory[obj].itemObj.spriteData.name, "itemObj":"Axe"});//might can just put null as itemObj, not using it?
+    } else {
+      //it something like logs or string that can be directly JSON.stringified
+      saveList.push(player.inventory[obj]);//should work, they aint got functions in em
+    }
+  }//might have to stringify whole list instead of individual items? we'll see
+  localStorage.setItem("playerInv", JSON.stringify(saveList));
+}
 
 var ghostR = [48,80];//ghost facing right coords
 var ghostL = [64,96];//ghost facing left coords
@@ -520,21 +625,40 @@ function interactNPC(nextX, nextY){
   }
 }
 
-//
+
 var itemInteractObjs = {'tree':'axe'};//need base tile interact objs too? like in case of rock///////////////////////PICKAXE NOTE
 function interactObject(nextX, nextY){
   let object;
   let interacted = false;
+  //WHAT IS WRONG WITH THIS PART?//////////////////////////////////////////////////////////////////////FIX IT
   for (object in tile_map[nextX][nextY].objects){
-    if (tile_map[nextX][nextY].objects[object].type==="object"){// && tile_map[nextX][nextY].objects[object].id!=undefined){
-      let npcid = tile_map[nextX][nextY].objects[object].id;//[0].id;
-      var targetObj;
-      targetObj=filterObjById(game_objects, npcid)[0];
+    if (tile_map[nextX][nextY].objects[object].id===null || tile_map[nextX][nextY].objects[object].id==='undefined'){
+      continue;
+    }
+    if (tile_map[nextX][nextY].objects[object].type==="object"){
+      //let npcid = tile_map[nextX][nextY].objects[object].id;//[0].id;
+      //console.log(`id: ${npcid}`);
+      let targetObj;
+      //targetObj=filterObjById(game_objects, npcid)//[0];//this not doing what you think
+      //targetObj = getObjByKeyVal(game_objects, "spriteData", tile_map[nextX][nextY].objects[object])
+      let obj;
+      for (obj in game_objects){
+        if (JSON.stringify(tile_map[nextX][nextY].objects[object])===JSON.stringify(game_objects[obj].spriteData)){
+          console.log("got it!");
+          targetObj = game_objects[obj];
+        }
+      }
+      //console.log(`targetObj: ${targetObj.spriteData.id}`)
+      let thing;
       if (hasFunction(targetObj, "playerInteract")){
+        console.log(`${targetObj} has funciton playerInteract`);
         targetObj.playerInteract();
+        //go baq
         interacted = true;
       }
     }
+    
+    //PAST THIS POINT SEEMS TO BE WORKING/////////////////////////////////////////////////////////////////////////FIX IT
     //object is tree, other tile object that is gettable with held item or inv item
     if (!interacted){
       if (itemInteractObjs[tile_map[nextX][nextY].objects[object].name]!==undefined){
@@ -673,7 +797,8 @@ function drawInv(){
 
 var objectToPlace=gameObjects['rock'];
 
-function placeTile (objToPlace){
+function placeTile (objToPlace){//now need to account for objects like mapsign, 
+                                //game_objects.push(new mapSign(x,y))
   if (objToPlace.type==='object'){
     tile_map[playerX][playerY].objects.push(objectToPlace);
   }
@@ -690,45 +815,40 @@ function resetTile(){
 
 //player objects testing///////////////////////////////////////////////////
 var regenObjects = [];//{"name":"tree", "coords":[10,10]} would get turned from stump into tree, scoured earth to rock, etc
-var looseObjects = [];//items laying around the world, ex)player drops axe, copy spriteData
-                      //                                  copy to looseObjects
-                      //                                  delete from player inventory 
-                      //                                  add spriteData to tile_map[playerX][playerY]
-                      //                                  player pick up item, Axe object has .x .y
-                      //                                  axes removes self from tile_map[x][y]
-                      //                                  copy object to player inventory
-                      //                                  remove object from looseObjects (by id?)
+var looseObjects = [];
+function axeAction(x,y){
+  let object;
+  let invPos;
+  for (object in tile_map[x][y].objects){
+    if (tile_map[x][y].objects[object].name==='tree'){
+      chop.play();
+      if (player.skills.woodcutting.lvl>=Math.floor(Math.random()*25)){
+        player.incrementSkill('woodcutting', 1);
+        if (player.inventory.find(obj => obj.name === 'logs')){
+          //player.inventory['logs'].amt +=1;
+          invPos = player.inventory.findIndex(obj => obj.name ==='logs');
+          player.inventory[invPos].amt += 1;
+        } else {
+          player.inventory.push({'name':'logs', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
+        }
+        tile_map[x][y].objects.splice(object,1);
+        tile_map[x][y].objects.push(gameObjects['stump1']);
+        regenObjects.push({'name':'tree', 'coords':[x,y]});
+        break;
+      }
+    }
+  }
+}
 function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
   this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['axe']));
   this.spriteData.id = generateID();
   this.attBonus = 2;//add 2 to player attack if held
-  this.isHeld = false;//for object in player.equippedItems with isHeld === true, draw with player (this goes in Player fxn)
-                      //in Player interactNext, if tree, check holding axe
-                      //then player's held axe object.do thing to object from interactNext
-                      //player needs equip/unequip/switch fxn
-                      //             pick up/drop fxn
-                      //             -put spriteData on tile on drop, need looseItems list for actual item object
-                      //             on drop, timer goes off to permanently delete item to prevent buildup
-                      //             not all items like this?
-                      //
-  this.onGround = false;//otherwise it is in player inv
-  //this fxn called in interactNext
+  this.isHeld = false;
+  this.onGround = false;
+  //this.action = axeAction;
   this.action = function(x, y){//, object_name){//for chopping trees, attack is just a bonus to melee. could add attack type?
-    //at this point, need to prevent multiple of same type in objects, for now just keep in mind it is a bug
-    //tile_map[x][y], find object with object_name, add log obj to inventory, replace obj with stump1 sprite data
-    //    logs need to stack. don't necessarily need their own object like this
-    //    is obvious what it is as spriteData for displaying in inv and on tile (dropped),
-    //    when in inventory, it would be like: playerInv >>> ["logs":{"amt":10, "spriteData":baseTiles['log']}]
-    //    when dropping a log, -1 from player inventory, place sprite on tile it is dropped on
-    //    no need for ids, unnecessary objects
-    //    for chopped trees:
-    //        setInterval to check tiles with stumps on them
-    //        random chance to respawn so they don't all respawn at once
-    //        or when chopped, coords and type added to list, 
-    //        setInterval checks that list, if respawn, del from list, replace tree tile
     let object;
-    let chopped = false;
     let invPos;
     for (object in tile_map[x][y].objects){
       if (tile_map[x][y].objects[object].name==='tree'){
@@ -740,12 +860,8 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
             invPos = player.inventory.findIndex(obj => obj.name ==='logs');
             player.inventory[invPos].amt += 1;
           } else {
-            //player.inventory['logs']=1;//initializes logs in inventory
             player.inventory.push({'name':'logs', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
           }
-          //remove tree sprite from tile, replace with stump1 sprite
-          //add {'name':'tree', 'coords':[x, y]} to regenObjects
-          //delete tile_map[x][y].objects[object];
           tile_map[x][y].objects.splice(object,1);
           tile_map[x][y].objects.push(gameObjects['stump1']);
           regenObjects.push({'name':'tree', 'coords':[x,y]});
@@ -755,9 +871,8 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
     }
     //uh oh, just note that pickaxe will have to interact with base-tile and not tile objects!//////////////////////PICKAXE NOTE
   }
+  
 }
-player.inventory.push({"name":"axe", "itemObj":new Axe})
-player.holding = player.inventory[0];
 //end player objects testing///////////////////////////////////////////////
 
 //end player setup///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -773,7 +888,8 @@ function saveToLocal(){//now only runs if player clicks button
       tile_map[row][col].objects=filterObjByKeyVal(tile_map[row][col].objects, "type", "npc");
     }
   }
-  localStorage.setItem("userMap", JSON.stringify(tile_map))
+  localStorage.setItem("userMap", JSON.stringify(tile_map));
+  console.log("saved to local...")
 }
 
 //delete map from local storage
@@ -830,7 +946,7 @@ function getNpcById(arr, id){//does opposite of filterObjById, returns only npc 
   return arr.filter(obj => obj.hasOwnProperty('id') && obj.id!==id);
 }
 
-function filterNpcById(arr, id){
+function filterNpcById(arr, id){//THIS ONE SEEMS TO WORK FOR WHAT IS *SUPPOSED* TO BE GETOBJBYID, like, return the object by id...
   return arr.filter(obj => obj.hasOwnProperty('id') && obj.id===id);
 }
 
@@ -838,8 +954,21 @@ function filterObjByKeyVal(arr, key, val){//returns list minus all objects with 
   return arr.filter(obj => obj.hasOwnProperty(key) && obj[key] !== val);
 }
 
+function getObjByKeyVal(arr, key, val){//returns list minus all objects with key that equals val
+  return arr.filter(obj => obj.hasOwnProperty(key) && obj[key] === val);
+}
+
 function removeItemById(list, id){
   return list.filter(item => item.id !== id);
+}
+
+function isSpriteIdInList(list, sprId){
+  for (let i=0;i<list.length;i++){
+    if (list[i].spriteData.id === sprId){
+      return true
+    }
+  }
+  return false;
 }
 
 function isObjectInList(list, npcid){
@@ -945,57 +1074,6 @@ function Spider(){
   this.aggroRange = 10;
   this.reposition = false;
   this.reposCount = 0;
-  /*
-  this.update = function(){
-    if (this.x===playerX && this.y===playerY){
-      player.getAttacked(this.strength);//need to change to random
-    }
-    if (this.hp<1){
-      skele_die_sound.play();
-      removeNPC(this.spriteData.id, this.x, this.y);
-    }
-    let now = Date.now();
-    let restTime = Math.floor(Math.random()*this.delay);
-    if (now > this.lastTime+restTime){
-      this.lastTime=now;
-      //check distance to player
-      let dToPlayer = distToPlayer(this.x, this.y);
-      if (dToPlayer){//distToPlayer(this.x, this.y)<=this.aggroRange){
-        this.aggro=true;
-        this.lastAggro=Date.now();
-      } else {
-        if (this.aggro===true && Date.now()>this.lastAggro+3000){
-          this.aggro=false;
-        }
-      }
-      var newCoords=null;
-      if (!this.aggro){
-        newCoords=moveNPC(this.x,this.y);//returns x,y
-      } else {
-        var trackCoords = trackPlayer(this.x, this.y);
-        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
-        if (checkCollision(newCoords[0], newCoords[1])===true){
-          newCoords=[this.x, this.y, "right"];
-        }
-      }
-      
-      if (!isOneUnitAway(this.x, this.y, newCoords[0], newCoords[1])){
-        //don't
-        newCoords=[this.x, this.y, "right"];//messy but should work
-      }
-      
-      //remove self from current tile
-      if (newCoords[2]!==null){
-        this.spriteData.facing=newCoords[2];
-      }
-      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
-      this.x=newCoords[0];
-      this.y=newCoords[1];
-      //add self to new tile
-      tile_map[this.x][this.y].objects.push(this.spriteData)
-    }
-  }
-  */
   
   this.update = function(){
     if (this.x===playerX && this.y===playerY){
@@ -1003,6 +1081,7 @@ function Spider(){
     }
     if (this.hp<1){
       skele_die_sound.play();
+      game_objects.push(new Lootbag("spider", this.x, this.y));
       removeNPC(this.spriteData.id, this.x, this.y);
     }
     let now = Date.now();
@@ -1353,7 +1432,16 @@ function drawMap(disp_area){
         //check type.object (for now is only object or npc)
         var object;
         for (object in tile_map[sprtX][sprtY]['objects']){
-          //draw objects
+          //draw 
+          
+          if (typeof tile_map[sprtX][sprtY]['objects'][object].id !== 'undefined' && tile_map[sprtX][sprtY]['objects'][object].type==="object"){
+            //it has an id, but does it have an object in game_objects
+            if (!isSpriteIdInList(game_objects, tile_map[sprtX][sprtY]['objects'][object].id)){
+              delete tile_map[sprtX][sprtY]['objects'][object];
+              continue;
+            }
+          }
+          
           if (tile_map[sprtX][sprtY]['objects'][object].type==='object'){
             sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite']
             ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
