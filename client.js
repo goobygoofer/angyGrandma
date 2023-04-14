@@ -122,7 +122,7 @@ function drawStats(){
 //except for map, this is way too messy and broken for life rn, shelve until pruned////////////////////////HEY ASSHOLE
 var game_object_ids = [];
 var game_objects = [];//maybe npc and object ids all go in game_obj_ids, but npcs and game_objects still separate? idk
-function dungeonStairs(x, y){
+function dungeonStairs(x, y, switchTo=[]){
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['dungeonStairs']));
   this.spriteData.id=generateID();
   game_object_ids.push(this.spriteData.id);
@@ -196,6 +196,7 @@ function Lootbag(name, x, y){//dead spider's x,y. add this on death
 //////////////////////////////////////////////////////////////////////////////////////////////OBJECT INTERACTS BROKEN
 
 //sound stuff//////////////////////////////////////////////////////////////////////////
+const fish_sound = new Audio('fishing.mp3')
 const chop = new Audio('chop.mp3');
 const hit_sound = new Audio('hit.mp3');
 const skele_die_sound = new Audio('skele_die.mp3');
@@ -470,7 +471,8 @@ function Player(){
     "strength":{"xp":0,"lvl":1},
     "health":{"xp":0,"health":100,"max":100, "lvl":1},
     "playerLvl":1,
-    "woodcutting":{"xp":0,"lvl":1}
+    "woodcutting":{"xp":0,"lvl":1},
+    "fishing":{"xp":0, "lvl":1}
   };
   this.inventory = [];
   this.lastInventory = JSON.stringify(this.inventory);
@@ -585,12 +587,16 @@ if (playerStats!==null){
   player.skills=JSON.parse(playerStats);
   playerStats=null;
   if (player.skills.woodcutting===undefined){
-    player.skills['woodcutting']={"xp":0,"lvl":1}
+    player.skills['woodcutting']={"xp":0,"lvl":1};
+  }
+  if (player.skills.fishing===undefined){
+    player.skills['fishing']={"xp":0,"lvl":1};
   }
 }
 //get inventory from local
 var pObjList = {
   "axe":Axe,
+  "fishingpole":Fishingpole
   //next here will be fishingpole
 }
 
@@ -613,6 +619,10 @@ if (playerInv!=='undefined'){
 if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="axe")){
   player.holding={"name":"nothing", "itemObj":null};
   player.inventory.push({"name":"axe", "itemObj":new Axe})
+}
+if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="fishingpole")){
+  //player.holding={"name":"nothing", "itemObj":null};
+  player.inventory.push({"name":"fishingpole", "itemObj":new Fishingpole})
 }
 
 
@@ -678,13 +688,16 @@ function interactNPC(nextX, nextY){
 
 var itemInteractObjs = {'tree':'axe'};//need base tile interact objs too? like in case of rock///////////////////////PICKAXE NOTE
 function interactObject(nextX, nextY){
+  console.log("inteacting with next tile...");
   let object;
   let interacted = false;
   //WHAT IS WRONG WITH THIS PART?//////////////////////////////////////////////////////////////////////FIX IT
   for (object in tile_map[nextX][nextY].objects){
     if (tile_map[nextX][nextY].objects[object].id===null || tile_map[nextX][nextY].objects[object].id==='undefined'){
+      console.log("objects null or undefined")
       continue;
     }
+    console.log("got past continue...");
     if (tile_map[nextX][nextY].objects[object].type==="object"){
       let targetObj;
       let obj;
@@ -703,6 +716,7 @@ function interactObject(nextX, nextY){
     //PAST THIS POINT SEEMS TO BE WORKING/////////////////////////////////////////////////////////////////////////FIX IT
     //object is tree, other tile object that is gettable with held item or inv item
     if (!interacted){
+      console.log("got inside !interacted like for trees")
       if (itemInteractObjs[tile_map[nextX][nextY].objects[object].name]!==undefined){
         //it is a tree or other item interactable obj
         if (player.holding.name === itemInteractObjs[tile_map[nextX][nextY].objects[object].name]){
@@ -711,6 +725,10 @@ function interactObject(nextX, nextY){
         }
       }
     }
+  }
+  console.log("check instead for base-tile interaction?");
+  if (player.holding.name!=="nothing"){
+    player.holding.itemObj.action(nextX, nextY);
   }
 }
 
@@ -867,29 +885,59 @@ function resetTile(){
 //player objects testing///////////////////////////////////////////////////
 var regenObjects = [];//{"name":"tree", "coords":[10,10]} would get turned from stump into tree, scoured earth to rock, etc
 var looseObjects = [];
-function axeAction(x,y){
-  let object;
-  let invPos;
-  for (object in tile_map[x][y].objects){
-    if (tile_map[x][y].objects[object].name==='tree'){
-      chop.play();
-      if (player.skills.woodcutting.lvl>=Math.floor(Math.random()*25)){
-        player.incrementSkill('woodcutting', 1);
-        if (player.inventory.find(obj => obj.name === 'logs')){
-          //player.inventory['logs'].amt +=1;
-          invPos = player.inventory.findIndex(obj => obj.name ==='logs');
-          player.inventory[invPos].amt += 1;
+
+function Fishingpole(){
+  this.equippable=true;
+  this.spriteData = JSON.parse(JSON.stringify(playerObjects['fishingpole']));
+  this.attBonus = -1;//dango floppy fishin pole can't hwhack for nothin'!
+  this.isHeld = false;//might not need this?
+  this.onGround = false;//or this? yet?
+  this.bobberX = null;
+  this.bobberY = null;
+  this.action = function(x, y){
+    let fishingTimeoutId = this.isFishing; // Store the previous timeout ID in a local variable
+    if (fishingTimeoutId !== null && this.bobberX!==null){
+      clearTimeout(fishingTimeoutId);
+      //remove bobber from tile being fished on
+      console.log(`bobberX:${this.bobberX}, bobberY:${this.bobberY}`)
+      tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
+    }
+    if (tile_map[x][y].sprite.name!=='water'){
+      return;
+    }
+    console.log("fishing action");
+    if (tile_map[x][y].sprite.name==='water'){
+      fish_sound.play();
+      console.log("you cast your lure into the water...");
+      //add bobber to next tile
+      tile_map[x][y].objects.push(gameObjects['bobber']);
+      this.bobberX=x;
+      this.bobberY=y;
+      this.isFishing = setTimeout(() =>{
+        tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
+        console.log("something is tugging at the line!");
+        if (player.skills.fishing.lvl>=Math.floor(Math.random()*25)){
+          //draw fish on next tile
+          tile_map[x][y].objects.push(gameObjects['fish']);
+          setTimeout(() => {
+            tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "fish");
+          }, 1000)
+          player.incrementSkill('fishing', 1);
+          if (player.inventory.find(obj => obj.name === 'fish')){//going to change to random fish or randomize fish in pool
+            //player.inventory['logs'].amt +=1;
+            let invPos = player.inventory.findIndex(obj => obj.name ==='fish');
+            player.inventory[invPos].amt += 1;
+          } else {
+            player.inventory.push({'name':'fish', 'amt':1, "itemObj":{"spriteData":gameObjects['fish']}})
+          }
         } else {
-          player.inventory.push({'name':'logs', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
+          console.log("it got away...");
         }
-        tile_map[x][y].objects.splice(object,1);
-        tile_map[x][y].objects.push(gameObjects['stump1']);
-        regenObjects.push({'name':'tree', 'coords':[x,y]});
-        break;
-      }
+      }, 5000);
     }
   }
 }
+
 function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
   this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['axe']));
@@ -1477,6 +1525,7 @@ else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
   },2533 );
   
 }
+
 //uncomment for npc spawning
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
 

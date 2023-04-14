@@ -78,6 +78,8 @@ baseTiles = {//redo entirely and in order
     "lootbag":[192,240],
     "abyss":[160,384],
     "dungeonStairs":[0,352],
+    "fish":[256, 480],
+    "bobber":[304,480],
     //letters here
     "F":[80,768]
     //end letters
@@ -139,6 +141,19 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "bobber":{
+        "name":"bobber",
+        "sprite":baseTiles['bobber'],
+        "type":"object",
+        "collision":false
+    },
+    "fish":{
+        "name":"fish",
+        "sprite":baseTiles['fish'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fish']
     },
     "abyss":{
         "name":"abyss",
