@@ -76,6 +76,8 @@ baseTiles = {//redo entirely and in order
     "fPole":[288,480],
     "craftTable":[192,528],//just this for now as a click point
     "lootbag":[192,240],
+    "abyss":[160,384],
+    "dungeonStairs":[0,352],
     //letters here
     "F":[80,768]
     //end letters
@@ -137,6 +139,12 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "abyss":{
+        "name":"abyss",
+        "sprite":baseTiles["abyss"],
+        "type":"base-tile",
+        "collision":true
     },
     "lootbag":{
         "name":"lootbag",
@@ -298,6 +306,13 @@ playerObjects = {
         "sprite":baseTiles['bed'],
         "type":"object",
         "collision":false
+    },
+    "dungeonStairs":{
+        "name":"dungeonStairs",
+        "sprite":baseTiles["dungeonStairs"],
+        "type":"object",
+        "collision":true,
+        "id":null
     },
     "mapsign":{
         "name":"mapsign",
