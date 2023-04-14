@@ -1455,7 +1455,6 @@ if (localStorage.getItem("tileMapSector")==="main"){
     }
   },2120);
 
-
   setInterval(function(){
     //check npcs list, generate more skeletons
     if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
@@ -1466,6 +1465,7 @@ if (localStorage.getItem("tileMapSector")==="main"){
         do {
           newRat.x=Math.floor(Math.random()*80);
           newRat.y=Math.floor(Math.random()*80);
+
           if (newRat.x<=50){
             newRat.x=51;
           }
@@ -1489,7 +1489,7 @@ if (localStorage.getItem("tileMapSector")==="main"){
         npcs.push(newRat);
         tile_map[newRat.x][newRat.y].objects.push(newRat.spriteData);
     }
-  },4000);
+  },6000);
 } 
 else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
   
@@ -1503,11 +1503,11 @@ else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
         do {
           newSpide.x=Math.floor(Math.random()*80);
           newSpide.y=Math.floor(Math.random()*80);
-          if (newSpide.x<=50){
-            newSpide.x=51;
+          if (newSpide.x<=10){
+            newSpide.x=11;
           }
-          if (newSpide.y<=50){
-            newSpide.y=51;
+          if (newSpide.y<=10){
+            newSpide.y=11;
           }
           if (tile_map[newSpide.x][newSpide.y].sprite.collision===true){
             continue;
@@ -1527,7 +1527,40 @@ else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
         tile_map[newSpide.x][newSpide.y].objects.push(newSpide.spriteData);
     }
   },2533 );
-  
+  setInterval(function(){
+    //check npcs list, generate more skeletons
+    if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
+        let newRat = new Rat;
+        newRat.spriteData.id=generateID();
+        //console.log(newRat.spriteData.id);
+        var coords_ok=false;
+        do {
+          newRat.x=Math.floor(Math.random()*80);
+          newRat.y=Math.floor(Math.random()*80);
+          if (newRat.x<=10){
+            newRat.x=11;
+          }
+          if (newRat.y<=10){
+            newRat.y=11;
+          }
+          if (tile_map[newRat.x][newRat.y].sprite.collision===true){
+            continue;
+          }
+          //if here just have to check for object collision now
+          let object;
+          for (object in tile_map[newRat.x][newRat.y].objects){
+            if (tile_map[newRat.x][newRat.y].objects[object].collision===true){
+              continue;
+            }
+          }
+          coords_ok=true;
+        } while (coords_ok===false);
+        game_ids.push(newRat.spriteData.id)
+        newRat.id=newRat.spriteData.id;
+        npcs.push(newRat);
+        tile_map[newRat.x][newRat.y].objects.push(newRat.spriteData);
+    }
+  },6000);
 }
 
 //uncomment for npc spawning
