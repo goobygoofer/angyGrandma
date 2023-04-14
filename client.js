@@ -208,6 +208,10 @@ rain_sound.addEventListener('timeupdate', () => {
     console.log("lightning!");
     ctx.fillStyle='rgba(255, 255, 255, 0.3)';
     ctx.fillRect(0,0,canvas.width, canvas.height);
+    if (player.holding.name==='fishingpole'){
+      console.log("struck by lightning!");
+      player.skills.health.health-=15;
+    }
   }
 });
 
