@@ -150,6 +150,42 @@ function mapSign(x, y){
   }
 }//the fact that any map sprite you place works is probably going to be a bug later on... heheh
 
+function Treasurechest(x, y){
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['chest2']));
+  console.log(this.spriteData);
+  this.spriteData.id = generateID();
+  game_object_ids.push(this.spriteData.id);
+  this.x=x;
+  this.y=y;
+  tile_map[this.x][this.y].objects.push(this.spriteData);
+  this.playerInteract = function(){
+    //if player has key (dropped by skeleton by chance)
+    //just like loot bag, maybe could combine fxns?
+    if (player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="sword")){
+      player.inventory.push({"name":"ironsword", "itemObj":new Ironsword})
+    }
+    let object;
+    let count=0;
+    for (object in tile_map[this.x][this.y].objects){
+      if (tile_map[this.x][this.y].objects[object].id === this.spriteData.id){
+        tile_map[this.x][this.y].objects.splice(count,1);
+        break;
+      }
+      count+=1;
+    }
+    //remove from game_objects
+    let game_obj;
+    let obj_count=0;
+    for (game_obj in game_objects){
+      if (game_objects[game_obj].spriteData.id===this.spriteData.id){
+
+        game_objects.splice(obj_count, 1);
+        break;
+      }
+      obj_count+=1;
+    }
+  }
+}
 
 function Lootbag(name, x, y){//dead spider's x,y. add this on death
   //name is from what dropped it, determines what goes in bag
@@ -242,7 +278,7 @@ spriteSheet.src = 'spritesheet-0.5.18.png';
 ////////////////////////////////////////////////////////////////////////END NEW UI TESTING REMOVE IF IT SUCKS
 
 //get user previous map from local storage
-var functionObjs={"mapsign":mapSign, "dungeonStairs":dungeonStairs}
+var functionObjs={"mapsign":mapSign, "dungeonStairs":dungeonStairs, "chest2":Treasurechest}
 /*
 var myData = localStorage.getItem("");//originally got userMap
 if (myData!==null){
@@ -265,6 +301,7 @@ function mapLoaded(){
 
 
 //setup dropdown menu for base tiles
+/*
 const dropdown = document.getElementById('tile-dropdown');
 
 for (const key in gameObjects){
@@ -274,7 +311,8 @@ for (const key in gameObjects){
     dropdown.append(option)
   }
 }
-
+*/
+/*
 dropdown.addEventListener("change",function(){
   const selectedTile = this.value;
   objectToPlace=gameObjects[selectedTile];
@@ -282,6 +320,7 @@ dropdown.addEventListener("change",function(){
   sprtCtx.drawImage(spriteSheet, objectToPlace.sprite[0],objectToPlace.sprite[1], 16,16,
     0, 0, 16,16);
 })
+*/
 
 // add arrow key listener for desktop users
 let timerId;
@@ -332,11 +371,11 @@ document.getElementById('upButton').addEventListener('click', () => movePlayer('
 document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
 document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
 document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
-document.getElementById('placeButton').addEventListener('click', () => placeTile(objectToPlace));
-document.getElementById('resetButton').addEventListener('click', () => clearUserMap());
-document.getElementById('saveButton').addEventListener('click', () => saveToLocal());
-document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
-document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
+//document.getElementById('placeButton').addEventListener('click', () => placeTile(objectToPlace));
+//document.getElementById('resetButton').addEventListener('click', () => clearUserMap());
+//document.getElementById('saveButton').addEventListener('click', () => saveToLocal());
+//document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
+//document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 
 function isTopLeftClicked(event, uicanvas){
@@ -430,7 +469,7 @@ canvas.addEventListener('touchend', event => {
     player.equip();
   }
 });
-
+/*
 const fileInput = document.getElementById('file-input');
 fileInput.addEventListener('change', (event) => {
   const file = event.target.files[0];
@@ -463,6 +502,7 @@ const downloadButton = document.getElementById('download-button');
 downloadButton.addEventListener('click', () => {
   downloadArrayAsJSFile(localStorage['userMap'], "my_map");
 })
+*/
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
@@ -507,6 +547,7 @@ function Player(){
       } else {
         this.skills.health['health']=this.skills.health.max;
         localStorage['playerStats']=JSON.stringify(this.skills);
+        localStorage.setItem("playerLoc", JSON.stringify([25, 20]))
         //localStorage['playerInv']=JSON.stringify(this.inventory)
         deathScreen();
         setTimeout(() => {location.reload();},3000);
@@ -600,7 +641,8 @@ if (playerStats!==null){
 //get inventory from local
 var pObjList = {
   "axe":Axe,
-  "fishingpole":Fishingpole
+  "fishingpole":Fishingpole,
+  "ironsword":Ironsword
   //next here will be fishingpole
 }
 
@@ -817,7 +859,7 @@ function movePlayer(direction) {
   }
   playerX=potentialX;
   playerY=potentialY;
-  localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]))
+  localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]));
 }
 
 function drawPlayer(){
@@ -939,6 +981,20 @@ function Fishingpole(){
         }
       }, 5000);
     }
+  }
+}
+
+function Ironsword(){
+  this.equippable=true;
+  this.spriteData = JSON.parse(JSON.stringify(playerObjects['ironsword']));
+  this.spriteData.id = generateID();
+  this.attBonus = 5;
+  this.isHeld = false;
+  this.onGround = false;
+  this.action = function(x, y){
+    //guess it doesn't really need action *yet*
+    //sword_slash.play();
+    console.log("sword did thing to other thing");
   }
 }
 
