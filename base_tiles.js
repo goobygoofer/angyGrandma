@@ -74,12 +74,16 @@ baseTiles = {//redo entirely and in order
     "fPoleR":[0,496],
     "fPoleL":[16,495],
     "fPole":[288,480],
+    "ironsword":[272,16],
+    "ironswordL":[192,192],
+    "ironswordR":[80,192],
     "craftTable":[192,528],//just this for now as a click point
     "lootbag":[192,240],
     "abyss":[160,384],
     "dungeonStairs":[0,352],
     "fish":[256, 480],
     "bobber":[304,480],
+    "chest2":[240,816],
     //letters here
     "F":[80,768]
     //end letters
@@ -111,6 +115,12 @@ playerObjects = {
         "id":null,
         "holdSprite":{"lt":baseTiles['fPoleL'], "rt":baseTiles['fPoleR']},
         "itemSprite":baseTiles['fPole']
+    },
+    "ironsword":{
+        "name":"ironsword",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['ironswordL'], "rt":baseTiles['ironswordR']},
+        "itemSprite":baseTiles['ironsword']
     }
 }
   gameObjects = {
@@ -141,6 +151,14 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "chest2":{
+        "name":"chest2",
+        "sprite":baseTiles['chest2'],
+        "id":null,
+        "type":"object",
+        "collision":true,
+        "itemSprite":baseTiles['chest2']
     },
     "bobber":{
         "name":"bobber",
