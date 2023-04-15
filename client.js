@@ -161,7 +161,7 @@ function Treasurechest(x, y){
   this.playerInteract = function(){
     //if player has key (dropped by skeleton by chance)
     //just like loot bag, maybe could combine fxns?
-    if (player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="sword")){
+    if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="sword")){
       player.inventory.push({"name":"ironsword", "itemObj":new Ironsword})
     }
     let object;
