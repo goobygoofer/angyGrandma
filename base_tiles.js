@@ -60,7 +60,33 @@ baseTiles = {//redo entirely and in order
     "deskCRV4":[112,1264],
     "redX":[288,751],//this one was weird
     "redDownArrow":[96,640],
-    "glasspane1":[160,560]
+    "glasspane1":[160,560],
+    "cloud":[240,736],
+    "axeR":[0,192],
+    "axeL":[272,192],
+    "axeItem":[64,64],
+    "statDisp":[80, 624],
+    "log":[96, 0],
+    "upArrow":[80,976],
+    "downArrow":[96, 976],
+    "hpIcon":[160,832],
+    "string":[80,240],//probably another object like logs where no actual object (like Axe), just inv obj and sprite obj
+    "fPoleR":[0,496],
+    "fPoleL":[16,495],
+    "fPole":[288,480],
+    "ironsword":[272,16],
+    "ironswordL":[192,192],
+    "ironswordR":[80,192],
+    "craftTable":[192,528],//just this for now as a click point
+    "lootbag":[192,240],
+    "abyss":[160,384],
+    "dungeonStairs":[0,352],
+    "fish":[256, 480],
+    "bobber":[304,480],
+    "chest2":[240,816],
+    //letters here
+    "F":[80,768]
+    //end letters
   }
 
   npcTiles = {
@@ -74,6 +100,29 @@ baseTiles = {//redo entirely and in order
     "spiderL":[112, 240]
   }
 
+playerObjects = {
+    //separate so user can't place items via place tile?
+    //prob start with axe
+    "axe":{
+        "name":"axe",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['axeL'], "rt":baseTiles['axeR']},//not all have this
+        "itemSprite":baseTiles['axeItem'],//all should have this. only drawn if on ground or inv showing
+       // "wear":["hand", true],//all have this, if no wear, set to [null, false]?
+    },
+    "fishingpole":{
+        "name":"fishingpole",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['fPoleL'], "rt":baseTiles['fPoleR']},
+        "itemSprite":baseTiles['fPole']
+    },
+    "ironsword":{
+        "name":"ironsword",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['ironswordL'], "rt":baseTiles['ironswordR']},
+        "itemSprite":baseTiles['ironsword']
+    }
+}
   gameObjects = {
     "spider":{
         "name":"spider",
@@ -102,6 +151,62 @@ baseTiles = {//redo entirely and in order
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "chest2":{
+        "name":"chest2",
+        "sprite":baseTiles['chest2'],
+        "id":null,
+        "type":"object",
+        "collision":true,
+        "itemSprite":baseTiles['chest2']
+    },
+    "bobber":{
+        "name":"bobber",
+        "sprite":baseTiles['bobber'],
+        "type":"object",
+        "collision":false
+    },
+    "fish":{
+        "name":"fish",
+        "sprite":baseTiles['fish'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fish']
+    },
+    "abyss":{
+        "name":"abyss",
+        "sprite":baseTiles["abyss"],
+        "type":"base-tile",
+        "collision":true
+    },
+    "lootbag":{
+        "name":"lootbag",
+        "id":null,
+        "sprite":baseTiles["lootbag"],
+        "type":"object",
+        "collision":true,//so player can interact with it? .action?
+        "itemSprite":baseTiles["lootbag"]
+    },
+    "string":{
+        //comes out of a spiders BUTT
+        "name":"string",
+        "sprite":baseTiles["string"],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles["string"]//maybe if no item sprite just use sprite?
+    },
+    "log":{
+        "name":"log",
+        "sprite":baseTiles["log"],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles["log"]//redundant but will work? for inventory drawing ease
+    },
+    "cloud":{
+        "name":"cloud",
+        "sprite":baseTiles["cloud"],
+        "type":"object",
+        "collision":false
     },
     "glasspane1":{
         "name":"glasspane1",
@@ -235,6 +340,13 @@ baseTiles = {//redo entirely and in order
         "type":"object",
         "collision":false
     },
+    "dungeonStairs":{
+        "name":"dungeonStairs",
+        "sprite":baseTiles["dungeonStairs"],
+        "type":"object",
+        "collision":true,
+        "id":null
+    },
     "mapsign":{
         "name":"mapsign",
         "sprite":baseTiles['mapsign'],
@@ -300,7 +412,7 @@ baseTiles = {//redo entirely and in order
         "name":"stump1",
         "sprite":baseTiles['stump1'],
         "type":"object",
-        "collision":true,
+        "collision":false,
     },
     "campfire":{
         "name":"campfire",
