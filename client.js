@@ -394,15 +394,14 @@ function mapLoaded(){
 
 //setup dropdown menu for base tiles
 const dropdown = document.getElementById('tile-dropdown');
-
-for (const key in gameObjects){
-  if (gameObjects.hasOwnProperty(key)){
-    const option = document.createElement("option");
-    option.text=key;
-    dropdown.append(option)
-  }
-}
 if (masterDebug && dropdown){
+  for (const key in gameObjects){
+    if (gameObjects.hasOwnProperty(key)){
+      const option = document.createElement("option");
+      option.text=key;
+      dropdown.append(option)
+    }
+  }
   dropdown.addEventListener("change",function(){
     const selectedTile = this.value;
     objectToPlace=gameObjects[selectedTile];
