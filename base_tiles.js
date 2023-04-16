@@ -84,6 +84,9 @@ baseTiles = {//redo entirely and in order
     "fish":[256, 480],
     "bobber":[304,480],
     "chest2":[240,816],
+    "web":[208,400],
+    "raft":[128,1264],
+    "sail":[144,1264],//draw raft > player > sail
     //letters here
     "F":[80,768]
     //end letters
@@ -151,6 +154,26 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "raft":{
+        "name":"raft",
+        "id":null,
+        "sprite":baseTiles['raft'],
+        "type":"object",
+        "collision":true,
+        "itemSprite":baseTiles['raft']
+    },
+    "sail":{
+        "name":"sail",
+        "sprite":baseTiles['sail'],
+        "type":"object",
+        "collision":false
+    },
+    "web":{
+        "name":"web",
+        "sprite":baseTiles['web'],
+        "type":"object",
+        "collision":false
     },
     "chest2":{
         "name":"chest2",
@@ -264,9 +287,11 @@ playerObjects = {
     },
     "sign":{
         "name":"sign",
+        "id":null,
         "sprite":baseTiles['sign'],
         "type":"object",
-        "collision":true
+        "collision":true,
+        "itemSprite":baseTiles['chest2']
     },
     "chair":{
         "name":"chair",

@@ -28,12 +28,25 @@ switch (tileMapSector){
     localStorage.setItem("tileMapSector", "main");
     break;
 }
-//debug stuffs
+//debug stuffss
+
+let masterDebug = false;
+function debugMode(){
+  if (masterDebug === false){
+    masterDebug=true;
+  } else {
+    masterDebug = false;
+  }
+}
+
+let muteSound = false;
 function mute(){
   if (muteSound===true){
     muteSound=false;
+    rain_sound.volume=1;
   } else {
     muteSound=true;
+    rain_sound.volume=0;
   }
 }
 
@@ -140,6 +153,41 @@ function dungeonStairs(x, y, switchTo=[]){
     location.reload();
   }
 }
+
+
+let signMessage = '';
+let showSign = false;
+function Sign(x, y, message){//these *could* be reconstituted, but for now just hardcode the in cause maps pita
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['sign']));
+  this.spriteData.id = generateID();
+  this.displayInterval = null;
+  this.lastX = null;
+  this.lastY = null;
+  game_object_ids.push(this.spriteData.id);
+  tile_map[x][y].objects.push(this.spriteData);
+  this.playerInteract=function(){
+    this.lastX = playerX;
+    this.lastY = playerY;
+    //display a message for the player
+    //transparent tan, brown letters
+    //disappears if player moves
+    console.log(message);
+    signMessage = message;
+    showSign = true;
+    this.displayInterval = setInterval(() => {
+      if (playerX !== this.lastX || playerY !== this.lastY){
+        showSign=false;
+        signMessage = '';
+        this.lastX=null;
+        this.lastY=null;
+        clearInterval(this.displayInterval);
+      }
+    }, 250);
+  }
+}
+
+//ex) game_objects.push(new Sign(x, y, "Bottom left is inventory, scroll through and click/press F to use/equip item"))
+
 function mapSign(x, y){
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['mapsign']));
   this.spriteData.id=generateID();
@@ -150,9 +198,42 @@ function mapSign(x, y){
   }
 }//the fact that any map sprite you place works is probably going to be a bug later on... heheh
 
+let playerSailing = false;
+let raftID = null;//gets set when playerRaft gets added to game objects
+let playerRaft = null;
+
+function Raft(x, y){
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['raft']));
+  this.spriteData.id=generateID();
+  game_object_ids.push(this.spriteData.id);
+  this.x=x;
+  this.y=y;
+  tile_map[this.x][this.y].objects.push(this.spriteData);
+  this.playerInteract = function(){
+    //boat always in water, next to a path (can be on land or in water)
+    //bool playerSailing = true; (changing from false)
+    playerSailing = true;
+    playerX = this.x;
+    playerY = this.y;
+    //remove spriteData from tile (add back when player disembarks)
+    tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);//should work
+    //change drawPlayer to draw boat UNDER player, sail OVER player //checks playerSailing bool in drawPlayer
+    
+    //change playerMove to only move on water
+    //  changes with playerX, playerY while playerSailing true
+    //
+    //but if next move includes a path
+    //  disembark
+    //    raft x,y where player disembarks
+    //    playerX, Y onto path
+    //    playerSailing = false
+    //    
+  }
+}
+
+
 function Treasurechest(x, y){
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['chest2']));
-  console.log(this.spriteData);
   this.spriteData.id = generateID();
   game_object_ids.push(this.spriteData.id);
   this.x=x;
@@ -232,6 +313,12 @@ function Lootbag(name, x, y){//dead spider's x,y. add this on death
 //////////////////////////////////////////////////////////////////////////////////////////////OBJECT INTERACTS BROKEN
 
 //sound stuff//////////////////////////////////////////////////////////////////////////
+function playSound(sound){
+  if (!muteSound){
+    sound.play();
+  }
+}
+
 const fish_sound = new Audio('fishing.mp3')
 const chop = new Audio('chop.mp3');
 const hit_sound = new Audio('hit.mp3');
@@ -253,6 +340,11 @@ rain_sound.addEventListener('timeupdate', () => {
 
 function playRain(){
   if (raining){
+    if (muteSound){
+      rain_sound.volume = 0;
+    } else {
+      rain_sound.volume = 1;
+    }
     rain_sound.curentTime = 0;
     rain_sound.play();
   } else {
@@ -301,7 +393,6 @@ function mapLoaded(){
 
 
 //setup dropdown menu for base tiles
-/*
 const dropdown = document.getElementById('tile-dropdown');
 
 for (const key in gameObjects){
@@ -311,16 +402,15 @@ for (const key in gameObjects){
     dropdown.append(option)
   }
 }
-*/
-/*
-dropdown.addEventListener("change",function(){
-  const selectedTile = this.value;
-  objectToPlace=gameObjects[selectedTile];
-  sprtCtx.clearRect(0,0,16,16);
-  sprtCtx.drawImage(spriteSheet, objectToPlace.sprite[0],objectToPlace.sprite[1], 16,16,
-    0, 0, 16,16);
-})
-*/
+if (masterDebug && dropdown){
+  dropdown.addEventListener("change",function(){
+    const selectedTile = this.value;
+    objectToPlace=gameObjects[selectedTile];
+    sprtCtx.clearRect(0,0,16,16);
+    sprtCtx.drawImage(spriteSheet, objectToPlace.sprite[0],objectToPlace.sprite[1], 16,16,
+      0, 0, 16,16);
+  })
+}
 
 // add arrow key listener for desktop users
 let timerId;
@@ -371,11 +461,14 @@ document.getElementById('upButton').addEventListener('click', () => movePlayer('
 document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
 document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
 document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
-//document.getElementById('placeButton').addEventListener('click', () => placeTile(objectToPlace));
-//document.getElementById('resetButton').addEventListener('click', () => clearUserMap());
-//document.getElementById('saveButton').addEventListener('click', () => saveToLocal());
-//document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
-//document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
+if (masterDebug && document.getElementById("placeButton")!==null && document.getElementById("resetButton")!==null && document.getElementById("saveButton")!==null && document.getElementById("resetTileButton")!==null && document.getElementById("collisionButton")!==null){
+  document.getElementById('placeButton').addEventListener('click', () => placeTile(objectToPlace));
+  document.getElementById('resetButton').addEventListener('click', () => clearUserMap());
+  document.getElementById('saveButton').addEventListener('click', () => saveToLocal());
+  document.getElementById('resetTileButton').addEventListener('click', () => resetTile());
+  document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
+}
+
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 
 function isTopLeftClicked(event, uicanvas){
@@ -469,44 +562,49 @@ canvas.addEventListener('touchend', event => {
     player.equip();
   }
 });
-/*
-const fileInput = document.getElementById('file-input');
-fileInput.addEventListener('change', (event) => {
-  const file = event.target.files[0];
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const fileContents = event.target.result;
-    localStorage.setItem('userMap', fileContents);
-    tile_map=localStorage['userMap'];
-    saveToLocal();
-    alert('file uploaded to local storage! page should refresh...');
-  }
-  reader.readAsText(file);//is this necessary?
-  location.reload();
-  console.log("refresh the page...");
-});
 
-function downloadArrayAsJSFile(array, filename){
-  const jsonString=JSON.stringify(array, null, 2);
-  const plainText = jsonString.replaceAll('\\','').slice(1,-1);
-  const blob = new Blob([plainText], {type: 'application/javascript'});
-  const url = URL.createObjectURL(blob);
-  const downloadLink = document.createElement('a');
-  downloadLink.href=url;
-  downloadLink.download=`${filename}.js`;
-  downloadLink.click();
-  URL.revokeObjectURL(url);
+if (masterDebug && document.getElementById("file-input")!==null){
+const fileInput = document.getElementById('file-input');
+  fileInput.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const fileContents = event.target.result;
+      localStorage.setItem('userMap', fileContents);
+      tile_map=localStorage['userMap'];
+      saveToLocal();
+      alert('file uploaded to local storage! page should refresh...');
+    }
+    reader.readAsText(file);//is this necessary?
+    location.reload();
+    console.log("refresh the page...");
+  });
+
+
+  function downloadArrayAsJSFile(array, filename){
+    const jsonString=JSON.stringify(array, null, 2);
+    const plainText = jsonString.replaceAll('\\','').slice(1,-1);
+    const blob = new Blob([plainText], {type: 'application/javascript'});
+    const url = URL.createObjectURL(blob);
+    const downloadLink = document.createElement('a');
+    downloadLink.href=url;
+    downloadLink.download=`${filename}.js`;
+    downloadLink.click();
+    URL.revokeObjectURL(url);
+  }
 }
 
-const downloadButton = document.getElementById('download-button');
-downloadButton.addEventListener('click', () => {
-  downloadArrayAsJSFile(localStorage['userMap'], "my_map");
-})
-*/
+if (masterDebug && document.getElementById("download-button")!==null){
+  const downloadButton = document.getElementById('download-button');
+  downloadButton.addEventListener('click', () => {
+    downloadArrayAsJSFile(localStorage['userMap'], "my_map");
+  })
+}
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
 function Player(){
+  this.lastDirection = null;
   this.lastTime = Date.now();
   this.lastMove = Date.now();
   this.regenTime=5000;
@@ -547,9 +645,10 @@ function Player(){
       } else {
         this.skills.health['health']=this.skills.health.max;
         localStorage['playerStats']=JSON.stringify(this.skills);
-        localStorage.setItem("playerLoc", JSON.stringify([25, 20]))
         //localStorage['playerInv']=JSON.stringify(this.inventory)
         deathScreen();
+        localStorage.setItem("playerLoc", JSON.stringify([26,19]));
+        localStorage.setItem("tileMapSector", "main");
         setTimeout(() => {location.reload();},3000);
       }
     }
@@ -601,30 +700,54 @@ function Player(){
       bonus = this.holding.itemObj.attBonus;
     }
     target.getAttacked(this.skills.strength.lvl + bonus);
-    hit_sound.play();
+    playSound(hit_sound);
   }
   this.getAttacked = function(damage){
     this.skills.health['health']-=damage;
     localStorage['playerStats']=JSON.stringify(this.skills);
-    //play player hit sound here
-    hit_sound.play();
+    playSound(hit_sound);
+  }
+  this.frozen = false;
+  this.frozenTimeout = null;
+  this.freeze = function(duration){
+    if (!this.frozen){
+      //set interval to prevent player movement?
+      this.frozen = true;
+      this.frozenTimeout = setTimeout(() => {
+        this.frozen=false;
+        clearTimeout(this.frozenTimeout);
+      }, duration);
+    }
   }
 }
 
 let player = new Player();
 
+var playerX;
+var playerY;//man why aint these just in Player?
+/*
+if (tileMapSector === "main"){
+  playerX=25;
+  playerY=20;
+} 
+else if (tileMapSector ==="dungeon_1"){
+  playerX=41;
+  playerY=47;
+}
+*/
 player.skills.health['health']=player.skills.health.max;
-var playerX = 15;
-var playerY = 15;
+
+
 var playerLoc = localStorage.getItem("playerLoc");
 if (playerLoc!==null){
   playerLoc=JSON.parse(playerLoc);
   playerX=playerLoc[0];
   playerY=playerLoc[1];
 } else {
-  playerX=15;
-  playerY=15;
+  playerX=26;
+  playerY=19;
 }
+
 
 //get user stats from local storage
 var playerStats = localStorage.getItem("playerStats");
@@ -734,13 +857,11 @@ function interactNPC(nextX, nextY){
 
 var itemInteractObjs = {'tree':'axe'};//need base tile interact objs too? like in case of rock///////////////////////PICKAXE NOTE
 function interactObject(nextX, nextY){
-  console.log("inteacting with next tile...");
   let object;
   let interacted = false;
   //WHAT IS WRONG WITH THIS PART?//////////////////////////////////////////////////////////////////////FIX IT
   for (object in tile_map[nextX][nextY].objects){
     if (tile_map[nextX][nextY].objects[object].id===null || tile_map[nextX][nextY].objects[object].id==='undefined'){
-      console.log("objects null or undefined")
       continue;
     }
     console.log("got past continue...");
@@ -753,7 +874,6 @@ function interactObject(nextX, nextY){
         }
       }
       if (hasFunction(targetObj, "playerInteract")){
-        console.log(`${targetObj} has funciton playerInteract`);
         targetObj.playerInteract();
         interacted = true;
       }
@@ -762,7 +882,6 @@ function interactObject(nextX, nextY){
     //PAST THIS POINT SEEMS TO BE WORKING/////////////////////////////////////////////////////////////////////////FIX IT
     //object is tree, other tile object that is gettable with held item or inv item
     if (!interacted){
-      console.log("got inside !interacted like for trees")
       if (itemInteractObjs[tile_map[nextX][nextY].objects[object].name]!==undefined){
         //it is a tree or other item interactable obj
         if (player.holding.name === itemInteractObjs[tile_map[nextX][nextY].objects[object].name]){
@@ -772,7 +891,6 @@ function interactObject(nextX, nextY){
       }
     }
   }
-  console.log("check instead for base-tile interaction?");
   if (player.holding.name!=="nothing"){
     player.holding.itemObj.action(nextX, nextY);
   }
@@ -823,6 +941,9 @@ function surroundingTiles(x, y) {
 
 //instead check players next potential tile in tile_map
 function movePlayer(direction) {
+  if (player.frozen === true){
+    return;
+  }
   if (Date.now()<player.lastMove+100){
     return;
   }
@@ -830,23 +951,26 @@ function movePlayer(direction) {
   let potentialX=playerX;
   let potentialY=playerY;
   if (direction === 'up') {//check y-1
+    player.lastDirection = 'up';
     if (playerY-1>10){
       potentialY=playerY-1;
     }
   }
   if (direction === 'down') {//check y+1
+    player.lastDirection = 'down';
     if (playerY+1<90){
       potentialY=playerY+1;
     }
   }
   if (direction === 'left') {//check x-1
+    player.lastDirection = 'left';
     if (playerX-1>10){
       potentialX=playerX-1;
     }
     ghostFacing='lt';
   }
   if (direction === 'right') {//check x+1
-    
+    player.lastDirection = 'right';
     if (playerX+1<90){
       potentialX=playerX+1;
     }
@@ -859,7 +983,7 @@ function movePlayer(direction) {
   }
   playerX=potentialX;
   playerY=potentialY;
-  localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]));
+  localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]))
 }
 
 function drawPlayer(){
@@ -869,12 +993,22 @@ function drawPlayer(){
     let drawPointX, drawPointY;
     if (playerX>10){drawPointX=10} else{drawPointX=playerX}
     if (playerY>10){drawPointY=10} else{drawPointY=playerY}
+    //if playerSailing, draw raft first
+    if (playerSailing){
+      ctx.drawImage(spriteSheet, baseTiles['raft'][0], baseTiles['raft'][1], 16,16,
+        drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
+    }
     ctx.drawImage(spriteSheet, ghostLoc[0],ghostLoc[1], 16,16,
         drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16,16);
     //then draw any items player is wearing/holding, probably wearing first
     if (player.holding.name!=="nothing"){
       ctx.drawImage(spriteSheet, player.holding.itemObj.spriteData.holdSprite[ghostFacing][0], player.holding.itemObj.spriteData.holdSprite[ghostFacing][1],
         16,16, drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
+    }
+    //if playerSailing, overlay sail
+    if (playerSailing){
+      ctx.drawImage(spriteSheet, baseTiles['sail'][0], baseTiles['sail'][1], 16,16,
+      drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
     }
 }
 
@@ -945,17 +1079,32 @@ function Fishingpole(){
     if (fishingTimeoutId !== null && this.bobberX!==null){
       clearTimeout(fishingTimeoutId);
       //remove bobber from tile being fished on
-      console.log(`bobberX:${this.bobberX}, bobberY:${this.bobberY}`)
       tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
     }
     if (tile_map[x][y].sprite.name!=='water'){
       return;
     }
-    console.log("fishing action");
     if (tile_map[x][y].sprite.name==='water'){
-      fish_sound.play();
+      playSound(fish_sound);
       console.log("you cast your lure into the water...");
       //add bobber to next tile
+      if (playerSailing){
+        //+1 to direction so as not to go under boat
+        switch(player.lastDirection){
+          case "up":
+            y-=1;
+            break;
+          case "down":
+            y+=1;
+            break;
+          case "left":
+            x-=1;
+            break;
+          case "right":
+            x+=1;
+            break;
+        }
+      }
       tile_map[x][y].objects.push(gameObjects['bobber']);
       this.bobberX=x;
       this.bobberY=y;
@@ -994,7 +1143,6 @@ function Ironsword(){
   this.action = function(x, y){
     //guess it doesn't really need action *yet*
     //sword_slash.play();
-    console.log("sword did thing to other thing");
   }
 }
 
@@ -1011,7 +1159,7 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
     let invPos;
     for (object in tile_map[x][y].objects){
       if (tile_map[x][y].objects[object].name==='tree'){
-        chop.play();
+        playSound(chop);
         if (player.skills.woodcutting.lvl>=Math.floor(Math.random()*25)){
           player.incrementSkill('woodcutting', 1);
           if (player.inventory.find(obj => obj.name === 'logs')){
@@ -1065,13 +1213,36 @@ function clearUserMap (){
 }
 
 //pretty obvious function. works for player and npcs (so far)
-function checkCollision(nextX, nextY){
+function checkCollision(nextX, nextY, npc=false){
   var object;
   for (object in tile_map[nextX][nextY]['objects']){
     if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
       return true
     }
   }
+  //always run the above, so objects in water can't be collided with!
+  if (playerSailing && npc===false){
+    let paths = footPathCheck(tile_map[nextX][nextY].objects, "name", "path", 4);
+    if (tile_map[nextX][nextY].sprite.name==='water' && paths===0){
+      playerRaft.x = nextX;
+      playerRaft.y = nextY;
+      return false;
+    } 
+    else if (paths>0){
+      console.log("disembark");
+      //disembark
+      playerSailing = false;
+      tile_map[playerX][playerY].objects.push(
+        //get Raft spriteData from game_objects
+        getSpriteDataById(game_objects, raftID)
+      );
+      return false;
+    }
+    else {
+      return true;
+    }
+  }
+  //sailing should skip the following:
   if (tile_map[nextX][nextY]['sprite']['collision']===true){
     let collide_override=false;
     for (object in tile_map[nextX][nextY]['objects']){
@@ -1099,6 +1270,16 @@ function countObjectsByPropertyValue(list, property, value){
   return count;
 }
 
+function footPathCheck(list, property, value, prefixLength){//check objects list to see if it has a pathX in it
+  let count=0;
+  for (let i = 0; i< list.length; i++){
+    if (list[i] && list[i][property].substring(0, prefixLength) === value.substring(0, prefixLength)){
+      count++;
+    }
+  }
+  return count;
+}
+
 //holy sweet jesus christ have to get rid of some of these...
 function hasFunction(obj, functionName){
   return obj && obj.hasOwnProperty(functionName) && typeof obj[functionName] ==='function';
@@ -1118,10 +1299,6 @@ function filterNpcById(arr, id){//THIS ONE SEEMS TO WORK FOR WHAT IS *SUPPOSED* 
 
 function filterObjByKeyVal(arr, key, val){//returns list minus all objects with key that equals val
   return arr.filter(obj => obj.hasOwnProperty(key) && obj[key] !== val);
-}
-
-function getObjByKeyVal(arr, key, val){//returns list minus all objects with key that equals val
-  return arr.filter(obj => obj.hasOwnProperty(key) && obj[key] === val);
 }
 
 function removeItemById(list, id){
@@ -1145,6 +1322,16 @@ function isObjectInList(list, npcid){
   }
   return false;
 }
+
+function getSpriteDataById(arr, id){
+  for (let i = 0; i < arr.length; i++){
+    const obj = arr[i];
+    if (obj.hasOwnProperty('spriteData') && obj.spriteData.hasOwnProperty('id') && obj.spriteData.id ===id){
+      return obj.spriteData;
+    }
+  }
+}
+
 //if you're wondering why the fuck all these are here, I am too XD
 //end utility functions///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1175,7 +1362,7 @@ function moveNPC(curX,curY, definite=false){//for passive (non-aggressive/tracki
     potentialY=curY;
   }
   //check potential tile for collision
-  let collision = checkCollision(potentialX, potentialY);
+  let collision = checkCollision(potentialX, potentialY, true);
   if (collision){return [curX, curY, facing]}
   else {
     return [potentialX, potentialY, facing];
@@ -1226,8 +1413,9 @@ function isOneUnitAway(x1, y1, x2, y2){
 var npcs=[];//npc's in game, {"[id]":npc_object}
 function Spider(){
   this.name="spider";
-  this.hp = 10;
-  this.strength = 2;
+  this.domain = null;//generated in generator(gee ya think?)
+  this.hp = 75;
+  this.strength = 10;
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['spider']));
   this.spriteData.id=null;
   this.x=null;
@@ -1241,108 +1429,12 @@ function Spider(){
   this.reposCount = 0;
   
   this.update = function(){
-    if (this.x===playerX && this.y===playerY){
-      player.getAttacked(this.strength);//need to change to random
-    }
+   //check if npc dead
     if (this.hp<1){
-      skele_die_sound.play();
+      player.incrementSkill("strength", 2);
+      player.incrementSkill("health", 2);
+      playSound(skele_die_sound);
       game_objects.push(new Lootbag("spider", this.x, this.y));
-      removeNPC(this.spriteData.id, this.x, this.y);
-    }
-    let now = Date.now();
-    let restTime = Math.floor(Math.random()*this.delay);
-    if (now > this.lastTime+restTime){
-      this.lastTime=now;
-      //check distance to player
-      let dToPlayer = distToPlayer(this.x, this.y);
-      if (dToPlayer<=this.aggroRange){//distToPlayer(this.x, this.y)<=this.aggroRange){
-        if (dToPlayer === this.lastDToPlayer) {
-          this.dToPlayerCounter++;
-          if (this.dToPlayerCounter >= 3) {
-            // dToPlayer has remained the same for 10 iterations
-            console.log("dToPlayer has not changed for 3 iterations");
-            this.reposition=true;
-            this.dToPlayerCounter = 0;
-          }
-        } else {
-          // dToPlayer has changed, reset counter
-          this.dToPlayerCounter = 0;
-        }
-        this.lastDToPlayer = dToPlayer;
-        this.aggro=true;
-        this.lastAggro=Date.now();
-      } else {
-        if (this.aggro===true && Date.now()>this.lastAggro+3000){
-          this.aggro=false;
-        }
-      }
-      var newCoords=null;
-      if (!this.aggro){
-        newCoords=moveNPC(this.x,this.y);//returns x,y
-      } else {
-        if (this.reposition===true){
-          if (this.reposCount<=250){
-            this.reposition=false;
-            this.aggro=false;
-            this.reposCount+=1;
-          } else {
-            this.reposition=false;
-            this.aggro=false;
-            this.reposCount=0;
-          } 
-          newCoords=moveNPC(this.x,this.y);//returns x,y
-        } else {
-          var trackCoords = trackPlayer(this.x, this.y);
-          newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
-        }
-        if (checkCollision(newCoords[0], newCoords[1])===true){
-          newCoords=[this.x, this.y, "right"];
-        }
-      }
-      
-      if (!isOneUnitAway(this.x, this.y, newCoords[0], newCoords[1])){
-        //don't
-        newCoords=[this.x, this.y, "right"];//messy but should work
-      }
-      
-      //remove self from current tile
-      if (newCoords[2]!==null){
-        this.spriteData.facing=newCoords[2];
-      }
-      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
-      this.x=newCoords[0];
-      this.y=newCoords[1];
-      //add self to new tile
-      tile_map[this.x][this.y].objects.push(this.spriteData)
-    }
-  }
-  
-  this.getAttacked = function(damage){
-    this.hp-=damage;
-    player.incrementSkill("strength", 5);
-    player.incrementSkill("health", 2);
-  }
-}
-
-function Rat(){
-  this.name="rat";
-  this.hp = 3;//lel just testing
-  this.strength = 3;
-  this.spriteData=JSON.parse(JSON.stringify(gameObjects['rat']));
-  this.spriteData.id=null;
-  this.x=null;
-  this.y=null;
-  this.lastTime=Date.now();//timestamp
-  this.delay = 2000;
-  this.aggro = false;
-  this.lastAggro=Date.now();
-  this.strength = 2;
-  this.update = function(){
-    if (this.x===playerX && this.y===playerY){
-      player.getAttacked(this.strength);//need to change to random
-    }
-    if (this.hp<1){
-      skele_die_sound.play();
       removeNPC(this.spriteData.id, this.x, this.y);
     }
     let now = Date.now();
@@ -1364,8 +1456,90 @@ function Rat(){
       } else {
         var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
         newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
-        if (checkCollision(newCoords[0], newCoords[1])===true){
+        if (checkCollision(newCoords[0], newCoords[1], true)===true){
           newCoords=[this.x, this.y, "right"];
+        }
+        if (newCoords[0]===playerX && newCoords[1]===playerY){
+          newCoords=[this.x, this.y, "right"];
+          player.getAttacked(this.strength);
+          //chance to freeze player (player.freeze, add web sprite with timeout)
+          //that way other mobs that freeze can have their own type of freeze
+          if (Math.floor(Math.random() * 100) > 90){
+            player.freeze(3000);
+            //draw web whether frozen or not just cause it's cool
+            //same fashion as bobber
+            tile_map[playerX][playerY].objects.push(gameObjects['web']);
+            let timeoutX = playerX;
+            let timeoutY = playerY;
+            setTimeout(() => {
+              tile_map[timeoutX][timeoutY].objects = filterObjByKeyVal(tile_map[timeoutX][timeoutY].objects, "name", "web");
+            },3000);
+          }
+        }
+      }
+      //remove self from current tile
+      if (newCoords[2]!==null){
+        this.spriteData.facing=newCoords[2];
+      }
+      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
+      this.x=newCoords[0];
+      this.y=newCoords[1];
+      //add self to new tile
+      tile_map[this.x][this.y].objects.push(this.spriteData)
+    }
+  }
+  
+  this.getAttacked = function(damage){
+    this.hp-=damage;
+  }
+}
+
+function Rat(){
+  this.name="rat";
+  this.hp = 50;//lel just testing
+  this.strength = 5;
+  this.spriteData=JSON.parse(JSON.stringify(gameObjects['rat']));
+  this.spriteData.id=null;
+  this.x=null;
+  this.y=null;
+  this.domain = null;
+  this.lastTime=Date.now();//timestamp
+  this.delay = 2000;
+  this.aggro = false;
+  this.lastAggro=Date.now();
+  this.strength = 2;
+  this.update = function(){
+    if (this.hp<1){
+      player.incrementSkill("strength", 2);
+      player.incrementSkill("health", 1);
+      playSound(skele_die_sound);
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
+    let now = Date.now();
+    let restTime = Math.floor(Math.random()*this.delay);
+    if (now > this.lastTime+restTime){
+      this.lastTime=now;
+      //check distance to player
+      if (distToPlayer(this.x, this.y)<=5){
+        this.aggro=true;
+        this.lastAggro=Date.now();
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+      var newCoords=null;
+      if (!this.aggro){
+        newCoords=moveNPC(this.x,this.y);//returns x,y
+      } else {
+        var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
+        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+        if (checkCollision(newCoords[0], newCoords[1], true)===true){
+          newCoords=[this.x, this.y, "right"];
+        }
+        if (newCoords[0]===playerX && newCoords[1]===playerY){
+          newCoords=[this.x, this.y, "right"];
+          player.getAttacked(this.strength);
         }
       }
       //remove self from current tile
@@ -1382,31 +1556,58 @@ function Rat(){
   this.getAttacked = function(damage){
     //receive attack from player
     this.hp-=damage;
-    player.incrementSkill("strength", 3);
-    player.incrementSkill("health", 1);
   }
 }
 
 function Skeleton(){
   this.name="skeleton";//its in spriteData but had to do it this way for some reason
-  this.hp = 1;//lel just testing
+  this.hp = 25;//lel just testing
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
   this.spriteData.id=null;
   this.x=null;
   this.y=null;
+  this.domain = null;
   this.lastTime=Date.now();//timestamp
+  this.strength = 5;
+  this.delay = 2000;
+  this.aggro = false;
+  this.lastAggro=Date.now();
+  this.strength = 5;
+
   this.update = function(){
     if (this.hp<1){
-      //skeleton dies
-      //remove sprite from tile, remove npc from npcs
-      skele_die_sound.play();
+      player.incrementSkill("strength", 1);
+      player.incrementSkill("health", 1);
+      playSound(skele_die_sound);
       removeNPC(this.spriteData.id, this.x, this.y);
     }
     let now = Date.now();
-    let restTime = Math.floor(Math.random()*3000)
+    let restTime = Math.floor(Math.random()*this.delay);
     if (now > this.lastTime+restTime){
       this.lastTime=now;
-      let newCoords=moveNPC(this.x,this.y);//returns x,y
+      //check distance to player
+      if (distToPlayer(this.x, this.y)<=5){
+        this.aggro=true;
+        this.lastAggro=Date.now();
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+      var newCoords=null;
+      if (!this.aggro){
+        newCoords=moveNPC(this.x,this.y);//returns x,y
+      } else {
+        var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
+        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+        if (checkCollision(newCoords[0], newCoords[1], true)===true){
+          newCoords=[this.x, this.y, "right"];
+        }
+        if (newCoords[0]===playerX && newCoords[1]===playerY){
+          newCoords=[this.x, this.y, "right"];
+          player.getAttacked(this.strength);
+        }
+      }
       //remove self from current tile
       if (newCoords[2]!==null){
         this.spriteData.facing=newCoords[2];
@@ -1421,9 +1622,6 @@ function Skeleton(){
   this.getAttacked = function(damage){
     //receive attack from player
     this.hp-=damage;
-    //player.skills.strength.xp+=1;
-    player.incrementSkill("strength", 1);
-    player.incrementSkill("health", 1);
   }
 }
 
@@ -1434,195 +1632,105 @@ function generateID(){//this is not best practice, just for testing. max of 1000
 }
 var game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
 
+const generatorList = {"spider":Spider, "rat":Rat, "skeleton":Skeleton}
+/*
+const domainList = {
+  "map_2_graveyard"://
+}
+*/
+function getValidSpawnCoord(minX, minY, maxX, maxY){//useful ass function!
+  let validCoords = [];
+  for (let x = minX; x < maxX; x++){
+    for (let y = minY; y < maxY; y++){
+      if (!tile_map[x][y].sprite.collision){
+        let object;
+        let hasCollision = false;
+        for (object in tile_map[x][y].objects){
+          if (tile_map[x][y].objects[object].collision){
+            hasCollision = true;
+            break;
+          }
+        }
+        if (!hasCollision){
+          validCoords.push({x:x, y:y});
+        }
+      }
+    }
+  }
+  if (validCoords.length > 0){
+    return validCoords[Math.floor(Math.random() * validCoords.length)];
+  } else {
+    return null;
+  }
+}
+
+function generateNPC(name, domain, amt, interval, xMin, xMax, yMin, yMax){
+  setInterval(function(){
+    if (countObjectsByPropertyValue(npcs, "domain", domain) < amt){
+      let randCoords = getValidSpawnCoord(xMin, yMin, xMax, yMax);
+      if (randCoords===null){return;};
+      let newNPC = new generatorList[name];
+      newNPC.x = randCoords.x;
+      newNPC.y = randCoords.y;
+      newNPC.domain = domain;
+      newNPC.spriteData.id = generateID();
+      game_ids.push(newNPC.spriteData.id)
+      newNPC.id=newNPC.spriteData.id;
+      npcs.push(newNPC);
+      tile_map[newNPC.x][newNPC.y].objects.push(newNPC.spriteData);
+    }
+  }, interval);
+}
+
 if (localStorage.getItem("tileMapSector")==="main"){
-  setInterval(function(){
-    if (countObjectsByPropertyValue(npcs, "name", "spider")<20){
-        let newSpide = new Spider;//should work without changing newSkeles lol
-        newSpide.spriteData.id=generateID();
-        //console.log(newSpide.spriteData.id);
-        let coords_ok;
-        coords_ok=false;
-        do {
-          newSpide.x=Math.floor(Math.random()*80);
-          newSpide.y=Math.floor(Math.random()*80);
-          if (newSpide.x<=50){
-            newSpide.x=51;
-          }
-          if (newSpide.y<=50){
-            newSpide.y=51;
-          }
-          if (tile_map[newSpide.x][newSpide.y].sprite.collision===true){
-            continue;
-          }
-          //if here just have to check for object collision now
-          let object;
-          for (object in tile_map[newSpide.x][newSpide.y].objects){
-            if (tile_map[newSpide.x][newSpide.y].objects[object].collision===true){
-              continue;
-            }
-          }
-          coords_ok=true;
-        } while (coords_ok===false);
-        game_ids.push(newSpide.spriteData.id)
-        newSpide.id=newSpide.spriteData.id;
-        npcs.push(newSpide);
-        tile_map[newSpide.x][newSpide.y].objects.push(newSpide.spriteData);
-    }
-  },2533 );
-
-  //infinite skeletons for taylor. comment out for only 45 skeletons until refresh
-  setInterval(function(){
-    if (countObjectsByPropertyValue(npcs, "name", "skeleton")<45){
-        let newSkele = new Skeleton;
-        newSkele.spriteData.id=generateID();
-        //console.log(newSkele.spriteData.id);
-        var coords_ok;
-        coords_ok=false;
-        do {
-          newSkele.x=Math.floor(Math.random()*80);
-          newSkele.y=Math.floor(Math.random()*80);
-          if (newSkele.x<=10){
-            newSkele.x=11;
-          }
-          if (newSkele.y<=10){
-            newSkele.y=11;
-          }
-          if (tile_map[newSkele.x][newSkele.y].sprite.collision===true){
-            continue;
-          }
-          //if here just have to check for object collision now
-          let objCollide = false;
-          var object;
-          for (object in tile_map[newSkele.x][newSkele.y].objects){
-            if (tile_map[newSkele.x][newSkele.y].objects[object].collision===true){
-              objCollide = true;
-              break;
-            }
-          }
-          if (objCollide){
-            continue;
-          }
-          coords_ok=true;
-        } while (coords_ok===false);
-        game_ids.push(newSkele.spriteData.id)
-        newSkele.id=newSkele.spriteData.id;
-        npcs.push(newSkele);
-        tile_map[newSkele.x][newSkele.y].objects.push(newSkele.spriteData);
-    }
-  },2120);
-
-  setInterval(function(){
-    //check npcs list, generate more skeletons
-    if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
-        let newRat = new Rat;
-        newRat.spriteData.id=generateID();
-        //console.log(newRat.spriteData.id);
-        var coords_ok=false;
-        do {
-          newRat.x=Math.floor(Math.random()*80);
-          newRat.y=Math.floor(Math.random()*80);
-
-          if (newRat.x<=50){
-            newRat.x=51;
-          }
-          if (newRat.y<=10){
-            newRat.y=11;
-          }
-          if (tile_map[newRat.x][newRat.y].sprite.collision===true){
-            continue;
-          }
-          //if here just have to check for object collision now
-          let object;
-          for (object in tile_map[newRat.x][newRat.y].objects){
-            if (tile_map[newRat.x][newRat.y].objects[object].collision===true){
-              continue;
-            }
-          }
-          coords_ok=true;
-        } while (coords_ok===false);
-        game_ids.push(newRat.spriteData.id)
-        newRat.id=newRat.spriteData.id;
-        npcs.push(newRat);
-        tile_map[newRat.x][newRat.y].objects.push(newRat.spriteData);
-    }
-  },6000);
+  generateNPC("skeleton", "graveyard", 45, 1000, 78, 89, 76, 89);//down by the graveyard
+  generateNPC("spider", "dungeon", 45, 1000, 42, 68, 39, 70);//guarding dungeon entrance
+  generateNPC("rat", "village", 45, 3000, 11, 26, 57, 78);//farm village on west coast
+  generateNPC("spider", "mountaintop", 7, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest
 } 
 else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
-  
-  setInterval(function(){
-    if (countObjectsByPropertyValue(npcs, "name", "spider")<10){
-        let newSpide = new Spider;//should work without changing newSkeles lol
-        newSpide.spriteData.id=generateID();
-        //console.log(newSpide.spriteData.id);
-        let coords_ok;
-        coords_ok=false;
-        do {
-          newSpide.x=Math.floor(Math.random()*80);
-          newSpide.y=Math.floor(Math.random()*80);
-          if (newSpide.x<=10){
-            newSpide.x=11;
-          }
-          if (newSpide.y<=10){
-            newSpide.y=11;
-          }
-          if (tile_map[newSpide.x][newSpide.y].sprite.collision===true){
-            continue;
-          }
-          //if here just have to check for object collision now
-          let object;
-          for (object in tile_map[newSpide.x][newSpide.y].objects){
-            if (tile_map[newSpide.x][newSpide.y].objects[object].collision===true){
-              continue;
-            }
-          }
-          coords_ok=true;
-        } while (coords_ok===false);
-        game_ids.push(newSpide.spriteData.id)
-        newSpide.id=newSpide.spriteData.id;
-        npcs.push(newSpide);
-        tile_map[newSpide.x][newSpide.y].objects.push(newSpide.spriteData);
-    }
-  },2533 );
-  setInterval(function(){
-    //check npcs list, generate more skeletons
-    if (countObjectsByPropertyValue(npcs, "name", "rat")<45){
-        let newRat = new Rat;
-        newRat.spriteData.id=generateID();
-        //console.log(newRat.spriteData.id);
-        var coords_ok=false;
-        do {
-          newRat.x=Math.floor(Math.random()*80);
-          newRat.y=Math.floor(Math.random()*80);
-          if (newRat.x<=10){
-            newRat.x=11;
-          }
-          if (newRat.y<=10){
-            newRat.y=11;
-          }
-          if (tile_map[newRat.x][newRat.y].sprite.collision===true){
-            continue;
-          }
-          //if here just have to check for object collision now
-          let object;
-          for (object in tile_map[newRat.x][newRat.y].objects){
-            if (tile_map[newRat.x][newRat.y].objects[object].collision===true){
-              continue;
-            }
-          }
-          coords_ok=true;
-        } while (coords_ok===false);
-        game_ids.push(newRat.spriteData.id)
-        newRat.id=newRat.spriteData.id;
-        npcs.push(newRat);
-        tile_map[newRat.x][newRat.y].objects.push(newRat.spriteData);
-    }
-  },6000);
+  generateNPC("spider", "dungeon", 75, 2500, 11, 89, 11, 89);
+  generateNPC("rat", "cellar", 20, 2000, 31, 33, 63, 67);
 }
 
 //uncomment for npc spawning
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
 //main///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function drawSign(){
+  //signMessage
+  //showSign
+  if (showSign){
+    //draw Sign
+    let x = 40;
+    let y = 40;
+    ctx.fillStyle="rgba(139, 69, 19, 0.75)";
+    ctx.fillRect(30, 30, 240,200);
+    ctx.fillStyle="white";
+    //ctx.fillText(signMessage, 40, 40);
+    let words = signMessage.split(' ');
+    let maxWidth = 200;
+    let line = '';
+    let lineWidth = 0;
+    for (let i = 0; i < words.length; i++){
+      const word = words[i];
+      const wordWidth = ctx.measureText(word).width;
+      if (lineWidth + wordWidth > maxWidth){
+        ctx.fillText(line, x, y);
+        y += 20;
+        line = '';
+        lineWidth = 0;
+      }
+      line += word + ' ';
+      lineWidth += wordWidth + ctx.measureText(' ').width;
+    }
+    ctx.fillText(line, x, y);
+  }
+}
+
+
+
 function drawWeather(x,y){
   //for now just draw rain on random tiles
   if (raining===true){
@@ -1637,6 +1745,9 @@ function drawWeather(x,y){
 }
 
 const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
+const blackGradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
+blackGradient.addColorStop(0, "transparent");
+blackGradient.addColorStop(1, "Black");
 gradient.addColorStop(0,"transparent");
 gradient.addColorStop(1, "DarkGray");
 
@@ -1716,8 +1827,13 @@ function drawMap(disp_area){
         16, 16, playerX*3-3, playerY*3-3, 8,8)
     }
   }
+  
   if (raining && !bigMap){//gray gradient that makes it look dark and cloudy!
     ctx.fillStyle = gradient;
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+  }
+  if (tileMapSector==="dungeon_1"){//change to in list of dark places
+    ctx.fillStyle = blackGradient;
     ctx.fillRect(0,0, canvas.width, canvas.height);
   }
 }
@@ -1749,11 +1865,32 @@ function update(){
     }
     drawStats();
     drawInv();//testing until better inv UI
+    drawSign();
   } else {
     deathScreen();
   }
 }
 
+
+
+
 //function mapLoaded(){
-setTimeout(setInterval(update,100),4000);//or update only when user moves or places a tile, need to add modes
+setTimeout(() => {
+  //signs around map to help player////////////////////////////////////////////////////////////////////////////////
+  //put signs here cause issues with tile_map loading
+  if (localStorage.getItem("tileMapSector")==="main"){
+    game_objects.push(new Sign(24, 22, "                    Welcome to Canvas II: Ghosts!                      At the bottom right is your inventory, scroll through with the arrows and press/click/tap F to use/equip the item. Walk into stuff to interact with it. Equip a weapon and go fight something!"))
+    game_objects.push(new Sign(23, 62, "                    Archibald Village              PLEASE DO NOT FEED THE RATS"));
+    game_objects.push(new Sign(33, 61, "                         Cellar"));
+    game_objects.push(new Sign(48, 78, "                    Miia's Nail House                   This house was built to appease the legendary Miss Miia, else she won't play the game"));
+    game_objects.push(new Sign(76, 83, "                    Theunorg's Chapel"));
+    //pier near house, boat to be added
+    game_objects.push(new Sign(34, 38, "Gone fishing, charters to resume soon..."));
+    playerRaft = new Raft(34, 42);
+    raftID = playerRaft.spriteData.id;
+    game_objects.push(playerRaft)
+  }
+  //end signs//////////////////////////////////////////////////////////////////////////////////////////////////////
+  setInterval(update,100)
+},4000);//or update only when user moves or places a tile, need to add modes
 //}
