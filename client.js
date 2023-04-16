@@ -19,12 +19,19 @@ switch (tileMapSector){
     script2.onload = mapLoaded;
     document.body.appendChild(script2);
     break;
-  default:
+  case "northsea":
     const script3 = document.createElement("script");
-    script3.src="./map_2.js";
+    script3.src="./northsea.js";
     script3.type="text/javascript";
     script3.onload = mapLoaded;
     document.body.appendChild(script3);
+    break;
+  default:
+    const scriptD = document.createElement("script");
+    scriptD.src="./map_2.js";
+    scriptD.type="text/javascript";
+    scriptD.onload = mapLoaded;
+    document.body.appendChild(scriptD);
     localStorage.setItem("tileMapSector", "main");
     break;
 }
@@ -120,6 +127,7 @@ function drawStats(){
     ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 25,250);
     ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 25, 260);
     ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 270);
+    ctx.fillText("fishing xp: " + player.skills.fishing.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 280);
   }
   //draw hp bar:
   ctx.fillStyle="rgba(255,0,0,0.5)";
@@ -199,17 +207,24 @@ function mapSign(x, y){
 }//the fact that any map sprite you place works is probably going to be a bug later on... heheh
 
 let playerSailing = false;
+if (JSON.parse(localStorage.getItem("playerSailing"))===true){
+  playerSailing=true;
+}
 let raftID = null;//gets set when playerRaft gets added to game objects
-let playerRaft = null;
+let playerRaft = null;//did it like this for reasons. why you so weird javascript
 
 function Raft(x, y){
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['raft']));
   this.spriteData.id=generateID();
   game_object_ids.push(this.spriteData.id);
+  raftID=this.spriteData.id;
   this.x=x;
   this.y=y;
-  tile_map[this.x][this.y].objects.push(this.spriteData);
+  if (!playerSailing){
+    tile_map[this.x][this.y].objects.push(this.spriteData);
+  }
   this.playerInteract = function(){
+    localStorage.setItem("playerSailing", JSON.stringify(true));
     //boat always in water, next to a path (can be on land or in water)
     //bool playerSailing = true; (changing from false)
     playerSailing = true;
@@ -563,7 +578,7 @@ canvas.addEventListener('touchend', event => {
 });
 
 if (masterDebug && document.getElementById("file-input")!==null){
-const fileInput = document.getElementById('file-input');
+  const fileInput = document.getElementById('file-input');
   fileInput.addEventListener('change', (event) => {
     const file = event.target.files[0];
     const reader = new FileReader();
@@ -578,20 +593,22 @@ const fileInput = document.getElementById('file-input');
     location.reload();
     console.log("refresh the page...");
   });
-
-
-  function downloadArrayAsJSFile(array, filename){
-    const jsonString=JSON.stringify(array, null, 2);
-    const plainText = jsonString.replaceAll('\\','').slice(1,-1);
-    const blob = new Blob([plainText], {type: 'application/javascript'});
-    const url = URL.createObjectURL(blob);
-    const downloadLink = document.createElement('a');
-    downloadLink.href=url;
-    downloadLink.download=`${filename}.js`;
-    downloadLink.click();
-    URL.revokeObjectURL(url);
-  }
 }
+
+
+
+function downloadArrayAsJSFile(array, filename){
+  const jsonString=JSON.stringify(array, null, 2);
+  const plainText = jsonString.replaceAll('\\','').slice(1,-1);
+  const blob = new Blob([plainText], {type: 'application/javascript'});
+  const url = URL.createObjectURL(blob);
+  const downloadLink = document.createElement('a');
+  downloadLink.href=url;
+  downloadLink.download=`${filename}.js`;
+  downloadLink.click();
+  URL.revokeObjectURL(url);
+}
+
 
 if (masterDebug && document.getElementById("download-button")!==null){
   const downloadButton = document.getElementById('download-button');
@@ -647,6 +664,8 @@ function Player(){
         //localStorage['playerInv']=JSON.stringify(this.inventory)
         deathScreen();
         localStorage.setItem("playerLoc", JSON.stringify([26,19]));
+        localStorage.setItem("raftLoc", JSON.stringify([34, 42]));
+        //put Raft back at pier
         localStorage.setItem("tileMapSector", "main");
         setTimeout(() => {location.reload();},3000);
       }
@@ -863,7 +882,6 @@ function interactObject(nextX, nextY){
     if (tile_map[nextX][nextY].objects[object].id===null || tile_map[nextX][nextY].objects[object].id==='undefined'){
       continue;
     }
-    console.log("got past continue...");
     if (tile_map[nextX][nextY].objects[object].type==="object"){
       let targetObj;
       let obj;
@@ -910,6 +928,7 @@ function interactNext(nextX, nextY){
 }
 
 function nextToFire(){
+  if (playerSailing){return false;}
   let coordList = surroundingTiles(playerX, playerY);
   var coord;
   for (coord in coordList){
@@ -917,6 +936,8 @@ function nextToFire(){
     if (tile_map[coordList[coord][0]][coordList[coord][1]].objects.length > 0){
       var object;
       for (object in tile_map[coordList[coord][0]][coordList[coord][1]].objects){
+        //if (!tile_map[coordList[coord][0]][coordList[coord][1]].objects[object]){return false;};
+        if (!tile_map[coordList[coord][0]][coordList[coord][1]].objects[object]){return false;};
         if (tile_map[coordList[coord][0]][coordList[coord][1]].objects[object].name==="campfire"){
           return true;
         }
@@ -951,26 +972,26 @@ function movePlayer(direction) {
   let potentialY=playerY;
   if (direction === 'up') {//check y-1
     player.lastDirection = 'up';
-    if (playerY-1>10){
+    if (playerY-1>9){
       potentialY=playerY-1;
     }
   }
   if (direction === 'down') {//check y+1
     player.lastDirection = 'down';
-    if (playerY+1<90){
+    if (playerY+1<91){
       potentialY=playerY+1;
     }
   }
   if (direction === 'left') {//check x-1
     player.lastDirection = 'left';
-    if (playerX-1>10){
+    if (playerX-1>9){
       potentialX=playerX-1;
     }
     ghostFacing='lt';
   }
   if (direction === 'right') {//check x+1
     player.lastDirection = 'right';
-    if (playerX+1<90){
+    if (playerX+1<91){
       potentialX=playerX+1;
     }
     ghostFacing='rt';
@@ -982,7 +1003,9 @@ function movePlayer(direction) {
   }
   playerX=potentialX;
   playerY=potentialY;
-  localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]))
+  if (!reloading){
+    localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]));
+  }
 }
 
 function drawPlayer(){
@@ -1208,11 +1231,47 @@ function saveToLocal(){//now only runs if player clicks button
 //delete map from local storage
 function clearUserMap (){
   delete localStorage['userMap'];
-  console.log("refresh to clear, place another tile before refreshing to cancel")
+  console.log("refresh to clear, place another tile before refreshing to cancel");
 }
+
+let reloading = false;
 
 //pretty obvious function. works for player and npcs (so far)
 function checkCollision(nextX, nextY, npc=false){
+  if (!tile_map || reloading){
+    return;
+  }
+  if (nextX < 11 || nextX > 89 || nextY < 11 || nextY > 89){
+    //case of main map VVV
+    //prob need to make this own function to keep checkCollision clean
+    if (localStorage.getItem("tileMapSector")==="main" && playerSailing && nextY < 11){
+      //set playerY to 89, playerX stays same because you can only exit with raft from north of map anyway
+      playerY = 89;
+      playerRaft.y = 89;
+      localStorage.setItem("playerLoc", JSON.stringify([playerX, 89]));
+      localStorage.setItem("raftLoc", JSON.stringify([playerX, 89]));
+      //new map and reload
+      localStorage.setItem("tileMapSector", "northsea");
+      reloading = true;
+      location.reload();
+      return;
+    }
+    else if (localStorage.getItem("tileMapSector")==="northsea"){
+      //will have to handle all directions now
+      //for now just north
+      if (nextY > 89){
+        playerY=11;//why is this not working
+        playerRaft.y = 11;
+        localStorage.setItem("playerLoc", JSON.stringify([playerX, 11]));
+        localStorage.setItem("raftLoc", JSON.stringify([playerX, 11]));
+        //new map and reload
+        localStorage.setItem("tileMapSector", "main");
+        reloading = true;
+        location.reload();
+        return;
+      }
+    }
+  }
   var object;
   for (object in tile_map[nextX][nextY]['objects']){
     if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
@@ -1220,21 +1279,25 @@ function checkCollision(nextX, nextY, npc=false){
     }
   }
   //always run the above, so objects in water can't be collided with!
-  if (playerSailing && npc===false){
+  if (playerSailing && npc===false){//only runs for player
     let paths = footPathCheck(tile_map[nextX][nextY].objects, "name", "path", 4);
     if (tile_map[nextX][nextY].sprite.name==='water' && paths===0){
       playerRaft.x = nextX;
       playerRaft.y = nextY;
+      localStorage.setItem("raftLoc", JSON.stringify([playerRaft.x, playerRaft.y]));
       return false;
     } 
     else if (paths>0){
       console.log("disembark");
       //disembark
+      localStorage.setItem("playerSailing", JSON.stringify(false));
+      localStorage.setItem("raftLoc", JSON.stringify([playerRaft.x, playerRaft.y]));
       playerSailing = false;
       tile_map[playerX][playerY].objects.push(
         //get Raft spriteData from game_objects
         getSpriteDataById(game_objects, raftID)
       );
+      localStorage.setItem("raftLoc", JSON.stringify([playerRaft.x, playerRaft.y]));
       return false;
     }
     else {
@@ -1691,6 +1754,10 @@ else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
   generateNPC("spider", "dungeon", 75, 2500, 11, 89, 11, 89);
   generateNPC("rat", "cellar", 20, 2000, 31, 33, 63, 67);
 }
+else if (localStorage.getItem("tileMapSector")==="northsea"){
+  generateNPC("rat", "island1", 5, 5000, 50, 58, 20, 28);
+  generateNPC("skeleton", "island2", 5, 5000, 21, 29, 58, 64);
+}
 
 //uncomment for npc spawning
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1771,6 +1838,7 @@ function drawMap(disp_area){
     for (col in disp_area[row]){
       let sprtX=disp_area[row][col][0];
       let sprtY=disp_area[row][col][1];
+      //console.log([sprtX, sprtY])
       let sprtLoc=gameObjects[tile_map[sprtX][sprtY]['sprite']['name']]['sprite']
       ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
         col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
@@ -1785,7 +1853,7 @@ function drawMap(disp_area){
         for (object in tile_map[sprtX][sprtY]['objects']){
           //draw 
           
-          if (typeof tile_map[sprtX][sprtY]['objects'][object].id !== 'undefined' && tile_map[sprtX][sprtY]['objects'][object].type==="object"){
+          if (tile_map[sprtX][sprtY]['objects'][object] && typeof tile_map[sprtX][sprtY]['objects'][object].id !== 'undefined' && tile_map[sprtX][sprtY]['objects'][object].type==="object"){
             //it has an id, but does it have an object in game_objects
             if (!isSpriteIdInList(game_objects, tile_map[sprtX][sprtY]['objects'][object].id)){
               delete tile_map[sprtX][sprtY]['objects'][object];
@@ -1793,13 +1861,13 @@ function drawMap(disp_area){
             }
           }
           
-          if (tile_map[sprtX][sprtY]['objects'][object].type==='object'){
+          if (tile_map[sprtX][sprtY]['objects'][object] && tile_map[sprtX][sprtY]['objects'][object].type==='object'){
             sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite']
             ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
               col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
           }
           //draw npcs
-          else if (tile_map[sprtX][sprtY]['objects'][object].type==='npc'){
+          else if (tile_map[sprtX][sprtY]['objects'][object] && tile_map[sprtX][sprtY]['objects'][object].type==='npc'){
             let npcid=tile_map[sprtX][sprtY]['objects'][object].id;
             if (isObjectInList(npcs, npcid)){
               let npcFacing=tile_map[sprtX][sprtY]['objects'][object].facing;
@@ -1881,15 +1949,43 @@ setTimeout(() => {
     game_objects.push(new Sign(24, 22, "                    Welcome to Canvas II: Ghosts!                      At the bottom right is your inventory, scroll through with the arrows and press/click/tap F to use/equip the item. Walk into stuff to interact with it. Equip a weapon and go fight something!"))
     game_objects.push(new Sign(23, 62, "                    Archibald Village              PLEASE DO NOT FEED THE RATS"));
     game_objects.push(new Sign(33, 61, "                         Cellar"));
-    game_objects.push(new Sign(48, 78, "                    Miia's Nail House                   This house was built to appease the legendary Miss Miia, else she won't play the game"));
+    game_objects.push(new Sign(48, 78, "                    Miia's Nail House                                  This house was built to appease the legendary Miss Miia, else she won't play the game"));
     game_objects.push(new Sign(76, 83, "                    Theunorg's Chapel"));
     //pier near house, boat to be added
     game_objects.push(new Sign(34, 38, "Gone fishing, charters to resume soon..."));
-    playerRaft = new Raft(34, 42);
+    let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
+    if (!raftLoc){
+      raftLoc = [34, 42];
+      localStorage.setItem("raftLoc", JSON.stringify(raftLoc));
+      playerRaft = new Raft(34, 42);
+    } else {
+      playerRaft = new Raft(raftLoc[0], raftLoc[1]);
+    }
     raftID = playerRaft.spriteData.id;
-    game_objects.push(playerRaft)
+    game_objects.push(playerRaft);
+  } 
+  else if (localStorage.getItem("tileMapSector")==="northsea"){
+    let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
+    playerRaft = new Raft(raftLoc[0], raftLoc[1]);
+    raftID = playerRaft.spriteData.id;
+    game_objects.push(playerRaft);
+    tile_map[65][87].objects.push(gameObjects['rockpile']);
+    game_objects.push(new Sign(65, 86, "South to Old Haven"));
+    //tile_map[50][50].objects.push(gameObjects['pathVERT']);
+    tile_map[42][12].objects.push(gameObjects['rockpile']);
+    game_objects.push(new Sign(42, 11, "North to mainland"));
   }
   //end signs//////////////////////////////////////////////////////////////////////////////////////////////////////
+  
+  //map hotfixes///////////////////////////////////////////////////////////////////////////////////////////////////
+  if (localStorage.getItem("tileMapSector")==="main"){
+    tile_map[47][36].sprite = gameObjects['water'];//just test, it works
+  }
+
+  //end hotfixes//////////////////maybe could put these in separate hotfix.js/////////////////////////////////////
+
+  //player in boat and reloaded page or sailed to different section of map
+
   setInterval(update,100)
 },4000);//or update only when user moves or places a tile, need to add modes
 //}
