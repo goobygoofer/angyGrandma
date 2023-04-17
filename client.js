@@ -90,6 +90,17 @@ function toggleRain(){
   }
 }
 
+function toggleStuck(){
+  //tileMapSector = "main"
+  //playerLoc back to home
+  //raftLoc back to home pier
+  //playerSailing false
+  //localStorage.setItem("tileMapSector", "main");
+  //localStorage.setItem("playerLoc", JSON.stringify([]))
+  //lmao just kill the player and they respawn XD
+  player.skills.health.health=-1;
+}
+
 var showStats = true;
 function toggleStats(){
   if (showStats===true){
@@ -283,7 +294,7 @@ function Treasurechest(x, y){
   }
 }
 
-function Lootbag(name, x, y){//dead spider's x,y. add this on death
+function Lootbag(name, x, y, item){//dead spider's x,y. add this on death
   //name is from what dropped it, determines what goes in bag
   console.log(`${name} dropped a lootbag...`)
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['lootbag']));
@@ -291,15 +302,15 @@ function Lootbag(name, x, y){//dead spider's x,y. add this on death
   game_object_ids.push(this.spriteData.id);//not necessary?
   this.x=x;
   this.y=y;
-  tile_map[playerX][playerY].objects.push(this.spriteData);
+  tile_map[playerX][playerY].objects.push(this.spriteData);//how the hell is this working?
   this.playerInteract=function(){
     //put stuff in player inv and delete self
-    if (player.inventory.find(obj => obj.name === 'string')){
+    if (player.inventory.find(obj => obj.name === item)){
       let invPos;
-      invPos = player.inventory.findIndex(obj => obj.name ==='string');
+      invPos = player.inventory.findIndex(obj => obj.name ===item);
       player.inventory[invPos].amt += 1;
     } else {
-      player.inventory.push({'name':'string', 'amt':1, "itemObj":{"spriteData":gameObjects['string']}});
+      player.inventory.push({'name':item, 'amt':1, "itemObj":{"spriteData":gameObjects[item]}});
     }
     //remove from tile
     let object;
@@ -484,6 +495,7 @@ if (masterDebug && document.getElementById("placeButton")!==null && document.get
 }
 
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
+document.getElementById('stuckButton').addEventListener('click', () => toggleStuck());
 
 function isTopLeftClicked(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
@@ -618,6 +630,76 @@ if (masterDebug && document.getElementById("download-button")!==null){
 }
 //end UI setup//////////////////////////////////////////////////////////////////////////////////////
 
+
+//extra player functions (npcs might be able to use some of these too)////////////////////////////////
+
+function cook(name){
+  //cook or eat item, coming from useItem. works for now
+  let invPos = player.inventory.findIndex(obj => obj.name ===name);
+  if (player.inventory[invPos].amt > 0){
+    if (nextToFire()){
+      //cook it, add cooked fish to player inventory
+      player.inventory[invPos].amt-=1;
+      addToInv("cookedfish");
+      console.log("cooked fish!");
+      }
+    else {
+        //eat it or do other stuff
+        console.log("find a fire");
+    }
+  } else {
+    console.log(`you don't have any ${name} to cook`);
+  }
+}
+
+let foodInfo = {
+  //food by name
+  "cookedfish":{
+    "health":5,//implying positive 2, maybe some food is poisonous! or food health could have chance to heal +/-, etc
+    "time":0,//might just be for template and not used for basic fish, but timer to detect player move or player pukes
+  }
+}
+function eat(name){
+  //get inv pos
+  //if player.inventory[invPos].amt>1, add corresponding hp and subtract 1 from amt
+  let invPos = player.inventory.findIndex(obj => obj.name ===name);
+  if (player.inventory[invPos].amt > 0){
+    player.inventory[invPos].amt-=1;
+    console.log(`you eat the ${name}`);
+    player.skills.health.health+=foodInfo[name].health;
+    if (player.skills.health.health > player.skills.health.max){
+      player.skills.health.health = player.skills.health.max;
+    }
+  } else {
+    console.log(`you don't have any ${name}`);
+  }
+}
+
+function useItem(name){//maybe make a separate file of player related functions? (like hyggeland bulk)
+  console.log(name);
+  //function assumes name got here because it is in usableObjects
+  switch(name){
+    case "fish":
+      cook(name);
+      break;
+    case "cookedfish":
+      eat(name);
+      break;
+  }
+}
+
+function addToInv(name){
+  if (player.inventory.find(obj => obj.name === name)){
+    //player.inventory['logs'].amt +=1;
+    let invPos = player.inventory.findIndex(obj => obj.name ===name);
+    player.inventory[invPos].amt += 1;
+  } else {
+    player.inventory.push({'name':name, 'amt':1, "itemObj":{"spriteData":gameObjects[name]}})
+  }
+}
+
+//end extra player functions//////////////////////////////////////////////////////////////////////////
+
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
 function Player(){
   this.lastDirection = null;
@@ -665,6 +747,7 @@ function Player(){
         deathScreen();
         localStorage.setItem("playerLoc", JSON.stringify([26,19]));
         localStorage.setItem("raftLoc", JSON.stringify([34, 42]));
+        localStorage.setItem("playerSailing", JSON.stringify("false"));
         //put Raft back at pier
         localStorage.setItem("tileMapSector", "main");
         setTimeout(() => {location.reload();},3000);
@@ -679,10 +762,12 @@ function Player(){
         }
     }
   }
+  this.usableItems = ['fish', 'cookedfish'];
   this.equip = function(){//if item equipped, unequip it. if not equipped, equip it.
                               //if item equipped and equipping a different item, switch it.
                               //item 
     let itemObject = player.inventory[player.invPosition].itemObj;
+    console.log(itemObject.spriteData.name);
     //equip, unequip or switch current item if itemObject.equippable!==undefined
     if (itemObject===player.holding.itemObj){
       //unequip
@@ -691,7 +776,17 @@ function Player(){
     else if (player.holding.name==="nothing" && itemObject.equippable===true){
       player.holding={"name":itemObject.spriteData.name, "itemObj":itemObject};
     }
-  }
+    else if (this.usableItems.includes(itemObject.spriteData.name)){
+      console.log(itemObject.name);
+      //useItem(itemObject.name)
+      //fxn that checks name player holding, amt, what player is standing next to/on, sailing etc
+      //    eg) holding axe, use log, standing on
+      useItem(itemObject.spriteData.name);
+    }
+  }//look below!
+
+  //need a craft function activated by clicking/pressing/tapping C. that way can have usableItems and craftableItems
+
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
     localStorage['playerStats']=JSON.stringify(this.skills);
@@ -1496,7 +1591,7 @@ function Spider(){
       player.incrementSkill("strength", 2);
       player.incrementSkill("health", 2);
       playSound(skele_die_sound);
-      game_objects.push(new Lootbag("spider", this.x, this.y));
+      game_objects.push(new Lootbag("spider", this.x, this.y, "string"));
       removeNPC(this.spriteData.id, this.x, this.y);
     }
     let now = Date.now();
@@ -1638,6 +1733,11 @@ function Skeleton(){
 
   this.update = function(){
     if (this.hp<1){
+      if (Math.floor(Math.random()*100 > 90)){
+        game_objects.push(new Lootbag("skeleton", this.x, this.y, "key"));
+      } else {
+        game_objects.push(new Lootbag("skeleton", this.x, this.y, "coin"));
+      }
       player.incrementSkill("strength", 1);
       player.incrementSkill("health", 1);
       playSound(skele_die_sound);

@@ -82,11 +82,14 @@ baseTiles = {//redo entirely and in order
     "abyss":[160,384],
     "dungeonStairs":[0,352],
     "fish":[256, 480],
+    "cookedfish":[272, 480],
     "bobber":[304,480],
     "chest2":[240,816],
     "web":[208,400],
     "raft":[128,1264],
     "sail":[144,1264],//draw raft > player > sail
+    "key":[16, 848],
+    "coin":[176,240],
     //letters here
     "F":[80,768]
     //end letters
@@ -175,6 +178,20 @@ playerObjects = {
         "type":"object",
         "collision":false
     },
+    "key":{
+        "name":"key",
+        "sprite":baseTiles['key'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['key']
+    },
+    "coin":{
+        "name":"coin",
+        "sprite":baseTiles['coin'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['coin']
+    },
     "chest2":{
         "name":"chest2",
         "sprite":baseTiles['chest2'],
@@ -195,6 +212,13 @@ playerObjects = {
         "type":"object",
         "collision":false,
         "itemSprite":baseTiles['fish']
+    },
+    "cookedfish":{
+        "name":"cookedfish",
+        "sprite":baseTiles['cookedfish'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['cookedfish']
     },
     "abyss":{
         "name":"abyss",
