@@ -174,6 +174,218 @@ function dungeonStairs(x, y, switchTo=[]){
 }
 
 
+function drawCraft(){
+  if (playerCrafting){
+    //draw craft popup x in corner, C button
+    //fillStyle
+    //fillRect
+    //crafting X and C listeners (for the popup and keystrokes) only work if playerCrafting
+    //within rect,
+    //  for obj in craftQueue,
+    //      draw obj to popup, increment 18 pixels per item
+    //      account for wrap around list, prob 8 items per row and a max #of craft items in queue?
+    ctx.fillStyle = "rgba(139, 69, 19, 0.75)";
+    ctx.fillRect(75, 100, 175, 100);
+    ctx.drawImage(spriteSheet, baseTiles['C'][0], baseTiles['C'][1], 16, 16,
+      134,184, 16,16);//use those coords for C click/tap
+    ctx.fillStyle = "white";
+    ctx.fillText("Crafting Table", 125, 110);
+    ctx.fillText("raft", 150, 195);
+    let item;
+    let startPosX = 80;
+    let startPosY = 120;
+    for (item in craftQueue){
+      //draw each item within popup bounds between x 75 and 250, y 112 and 185
+      //thats ~10 items across and ~4 deep, don't need that many but could
+      //best as just 1 item in queue to represent item in general while number is just pulled from player.inventory
+      if (craftQueue[item].spriteData.name in playerObjects){
+        ctx.drawImage(spriteSheet, craftQueue[item].spriteData.itemSprite[0], craftQueue[item].spriteData.itemSprite[1], 16, 16,
+          startPosX, startPosY, 16,16);
+      } else if (craftQueue[item].spriteData.name==="scroll"){//scroll, have to draw scroll then overlay (overlay 12x12?)
+        ctx.drawImage(spriteSheet, craftQueue[item].spriteData.sprite[0], craftQueue[item].spriteData.sprite[1], 16, 16,
+          startPosX, startPosY, 16,16);
+        //then have to see if it a player obj or other type obj //pObjList
+        let overlaySprite = null;//coords
+        if (craftQueue[item].spriteData.scroll in playerObjects){
+          overlaySprite = playerObjects[craftQueue[item].spriteData.scroll].itemSprite;
+        } else {
+          overlaySprite = baseTiles[craftQueue[item].spriteData.scroll];
+        }
+        ctx.drawImage(spriteSheet, overlaySprite[0], overlaySprite[1], 16, 16,
+          startPosX+6, startPosY+2, 8,8);  
+      } else {
+        ctx.drawImage(spriteSheet, craftQueue[item].spriteData.sprite[0], craftQueue[item].spriteData.sprite[1], 16, 16,
+          startPosX, startPosY, 16,16);
+      }
+      startPosX+=16;
+      if (startPosX >= 240){
+        startPosX = 80;
+        startPosY += 12;
+      }
+    }
+  }
+}
+
+//function for C listeners
+//
+let craftableItems = {"fishingpole":{"log":1, "string":1}};//
+
+function craftItem(){
+  //check for scroll in craftQueue
+  //  if no scroll, return, alert player craft failed
+  //  else
+  //    check queue scroll name in craftableItems
+  //    compare item amounts in player inventory
+  //    
+  //basically same as old function after that:
+  
+  //currentItem = item;//scroll now determines this
+  let currentItem = null;//scroll here
+  //defaults on first scroll in queue
+  let scroll;
+  let scrollPos;//scroll position to skip in raw item loop
+  for (scroll in craftQueue){
+    if (craftQueue[scroll].spriteData.scroll){
+      //scroll is just plain scroll, could reuse for other similar mechanisms (advanced cooking, etc)
+      //you get them as rewards or finding them or learning from npc
+      //edit spriteData.scroll to be item name (eg. "fishingpole"). hardcoding ok here since they are rewards
+      //when player gets a scroll, it draws scroll because name scroll
+      //but then draws item it is recipe for *over* the scroll
+      //because fuck makin a bunch of individual crafting sprites
+      currentItem = craftQueue[scroll].spriteData.scroll;
+      break;
+    }
+  }
+  if (currentItem === null){
+    return;//didn't have any crafting scrolls in there
+  }
+  let rawItem;
+  for (rawItem in craftQueue){
+    if (rawItem===scrollPos){continue;};//no need to check scroll and duh it exists cause you put it there
+    if (craftQueue[rawItem].spriteData.name==="scroll"){continue;};//maybe this check will work?1
+    let invPos = player.inventory.findIndex(obj => obj.name === craftQueue[rawItem].spriteData.name);//player.inventory[invPos].amt to compare
+    console.log(`checking invPos: ${invPos}`);
+    //player doesn't have item in inventory, go to next iter in outer for loop
+    if (invPos===-1){//why would it be in queue if it's not in inventory...?
+      console.log(`player doesn't have ${craftQueue[rawItem].name}`)
+      craftQueue = [];
+      return;
+    }
+    if (player.inventory[invPos].amt >= craftableItems[currentItem][craftQueue[rawItem].spriteData.name]){
+      //player has item and enough of it, continue
+      console.log(`has enough ${player.inventory[invPos].itemObj.spriteData.name}`)
+      continue;
+    } else {
+      //player has item but not enough, go to next iter in outer for loop
+      console.log(`not enough ${rawItem}`)
+      craftQueue = [];
+      return;
+    }
+  }
+  //if get here craft item -- subtract required items from player.inventory and add crafted item to 
+  let item;
+  for (item in craftableItems[currentItem]){
+    //subtract item from player.inventory[invPos]
+    let invPos = player.inventory.findIndex(obj => obj.name === item);
+    if (player.inventory[invPos].amt){
+      player.inventory[invPos].amt -= craftableItems[currentItem][item];
+    }//else it a scroll or necessary crafting object
+  }
+  //add crafted item to inventory
+  craftQueue = [];
+  addToInv(currentItem);
+}
+
+/*
+function craftItem(){
+  if (!playerCrafting){return;};//redundant but good measure probably
+
+  //checking if player has required items, if yes craft and return, else continue on first item that doesn't exist or not enough of
+  let item;
+  let craftGood = true;
+  let currentItem;
+  for (item in craftableItems){
+    console.log(`checking if can make ${item}`)
+    currentItem = item;
+    let rawItem;
+    if (!craftGood){
+      craftGood = true;
+      continue;
+    }
+    for (rawItem in craftQueue){
+      console.log(`checking item ${craftQueue[rawItem]} from in craftQueue`);
+      let invPos = player.inventory.findIndex(obj => obj.name === craftQueue[rawItem].spriteData.name);//player.inventory[invPos].amt to compare
+      console.log(`checking invPos: ${invPos}`);
+      //player doesn't have item in inventory, go to next iter in outer for loop
+      if (invPos===-1){
+        console.log(`player doesn't have ${craftQueue[rawItem].name}`)
+        craftGood = false;
+        break;
+      }
+      if (player.inventory[invPos].amt >= craftableItems[item][player.inventory[invPos].name]){
+        //player has item and enough of it, continue
+        continue;
+      } else {
+        //player has item but not enough, go to next iter in outer for loop
+        craftGood = false;
+        break;
+      }
+    }
+    if (!craftGood){continue};
+    //if get here craft item -- subtract required items from player.inventory and add crafted item to 
+    for (item in craftableItems[currentItem]){
+      //subtract item from player.inventory[invPos]
+      let invPos = player.inventory.findIndex(obj => obj.name === item);
+      player.inventory[invPos].amt -= craftableItems[currentItem][item];
+    }
+    console.log("got out of inner for loop")
+    //add crafted item to inventory
+    craftQueue = [];
+    addToInv(currentItem);
+  }
+  
+}
+*/
+
+let playerCrafting = false;
+let craftQueue = [];
+function craftingTable(x, y){
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['craftingtable']));
+  this.spriteData.id = generateID();
+  this.displayInterval = null;
+  this.lastX = null;
+  this.lastY = null;
+  game_object_ids.push(this.spriteData.id);
+  tile_map[x][y].objects.push(this.spriteData);
+  //this.craftQueue = [];
+  this.playerInteract = function(){
+    if (playerCrafting){return;};
+    console.log("player is crafting...");
+    this.lastX = playerX;
+    this.lastY = playerY;
+    playerCrafting=true;
+    //open craft popup -- starts blank, player scrolls through inventory and press F to add item to craftQueue
+    
+    //showCraft();//put with showStats/showSign. 
+
+    //player queues items with F
+    //if playerCrafting, listening for keypress at "C"raft and big red X (craft and exit, rsptvly)
+    //                   //start doing like this so sign, map, other popups etc dont have to have special places on canvas
+    //
+
+    this.displayInterval = setInterval(() => {
+      if (playerX !== this.lastX || playerY !== this.lastY || !playerCrafting){
+        console.log("player walked away from crafting table...");
+        playerCrafting = false;
+        craftQueue = [];
+        this.lastX=null;
+        this.lastY=null;
+        clearInterval(this.displayInterval);
+      }
+    }, 250);
+  }
+}
+
 let signMessage = '';
 let showSign = false;
 function Sign(x, y, message){//these *could* be reconstituted, but for now just hardcode the in cause maps pita
@@ -257,6 +469,52 @@ function Raft(x, y){
   }
 }
 
+function Treasurechest2(x, y, item, scroll=null){
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['chest2']));
+  this.spriteData.id = generateID();
+  game_object_ids.push(this.spriteData.id);
+  this.x=x;
+  this.y=y;
+  tile_map[this.x][this.y].objects.push(this.spriteData);
+  this.playerInteract = function(){
+    //if player has key (dropped by skeleton by chance)
+    //just like loot bag, maybe could combine fxns?
+    /*
+    if (!player.inventory.some(obj => obj.hasOwnProperty(item) && obj[item]===item)){
+      player.inventory.push({"name":item, "itemObj":new pObjList[name]})
+    }
+    */
+   if (item in playerObjects){
+       player.inventory.push({"name":item, "itemObj":new pObjList[item]})
+   } else if (scroll === null){
+       player.inventory.push({"name":item, "itemObj": gameObjects[item]})
+   } else if (item==="scroll" && scroll!==null){
+       let recipe = {"spriteData":JSON.parse(JSON.stringify(gameObjects['scroll']))};
+       recipe.spriteData.scroll=scroll;
+       player.inventory.push({"name":"scroll", "itemObj":recipe});
+   }
+    let object;
+    let count=0;
+    for (object in tile_map[this.x][this.y].objects){
+      if (tile_map[this.x][this.y].objects[object].id === this.spriteData.id){
+        tile_map[this.x][this.y].objects.splice(count,1);
+        break;
+      }
+      count+=1;
+    }
+    //remove from game_objects
+    let game_obj;
+    let obj_count=0;
+    for (game_obj in game_objects){
+      if (game_objects[game_obj].spriteData.id===this.spriteData.id){
+
+        game_objects.splice(obj_count, 1);
+        break;
+      }
+      obj_count+=1;
+    }
+  }
+}
 
 function Treasurechest(x, y){
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['chest2']));
@@ -452,8 +710,15 @@ document.addEventListener('keydown', (event) => {//this doesn't work right
   }
   timerId = setTimeout(() => {
     switch (event.key) {
+      case 'c':
+      case 'C':
+        if (playerCrafting){
+          craftItem();
+        }
+        break;
       case 'f':
       case 'F':
+        //need to check if playerCrafting so it adds to craftQueue instead
         player.equip();
         break;
       case ' ':
@@ -504,6 +769,13 @@ function isTopLeftClicked(event, uicanvas){
   return x < 25 && y < 25;
 }
 
+function isCraftingClicked(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x > 132 && x < 150 && y > 180 && y < 200; //134,184
+}
+
 function clickedStatToggle(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
@@ -548,6 +820,7 @@ function invScroll(dir){//not accounting for dropped items? on item drop, reset 
 }
 
 canvas.addEventListener('click', event => {
+  console.log('click');
   if (isTopLeftClicked(event, canvas)){
     if (bigMap){
       toggleMap();
@@ -566,9 +839,19 @@ canvas.addEventListener('click', event => {
   if (clickEquip(event, canvas)){
     player.equip();
   }
+  if (isCraftingClicked(event, canvas)){
+    if (playerCrafting){
+      craftItem();//also need exit button maybe?
+    }
+  }
 });
 
 canvas.addEventListener('touchend', event => {
+  if (isCraftingClicked(event.touches[0], canvas)){
+    if (playerCrafting){
+      craftItem();
+    }
+  }
   if (isTopLeftClicked(event.touches[0], canvas)){
     if (bigMap){
       toggleMap();
@@ -654,11 +937,16 @@ function cook(name){
 
 let foodInfo = {
   //food by name
+  "fish":{
+    "health":0,
+    "time":0
+  },
   "cookedfish":{
     "health":5,//implying positive 2, maybe some food is poisonous! or food health could have chance to heal +/-, etc
-    "time":0,//might just be for template and not used for basic fish, but timer to detect player move or player pukes
+    "time":0//might just be for template and not used for basic fish, but timer to detect player move or player pukes
   }
 }
+
 function eat(name){
   //get inv pos
   //if player.inventory[invPos].amt>1, add corresponding hp and subtract 1 from amt
@@ -675,9 +963,68 @@ function eat(name){
   }
 }
 
+//list of things that useItem checks if  you are next to - list order matters as first in list takes precedence
+let useCraftList = ['craftingtable']
+
+function nextTo(name){//this can prob replace nextToFire
+  if (playerSailing){return false;}//maybe there should be water crafting? lol
+  let coordList = surroundingTiles(playerX, playerY);//this func scalable?
+  var coord;
+  for (coord in coordList){
+    //check each tile for a firepit
+    if (tile_map[coordList[coord][0]][coordList[coord][1]].objects.length > 0){
+      var object;
+      for (object in tile_map[coordList[coord][0]][coordList[coord][1]].objects){
+        //if (!tile_map[coordList[coord][0]][coordList[coord][1]].objects[object]){return false;};
+        if (!tile_map[coordList[coord][0]][coordList[coord][1]].objects[object]){return false;};
+        if (tile_map[coordList[coord][0]][coordList[coord][1]].objects[object].name===name){
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 function useItem(name){//maybe make a separate file of player related functions? (like hyggeland bulk)
   console.log(name);
   //function assumes name got here because it is in usableObjects
+
+  //NOTE: find out what player is next to, *then* do appropriate switch case (i.e. fire, craft table, etc)
+  //maybe standing on takes precedent? is standing next to fire but standing on craft table craft override
+  //that being said, keep items more than 1 space apart to avoid stupid
+  //edible foods get switch case first? in case player gotta eat quick!
+  //this would mean edibles cant be used other than for eating, fair
+
+  //eat food takes precedence
+  switch(name){
+    case "cookedfish":
+    //other edible cases here
+      eat(name)
+      return;
+  }//else goes to see what is around player that takes precedence
+
+  //precedence level after eat: craft(crafting table), cook(campfire)
+  if (nextTo('campfire') && name in foodInfo){//maybe best to keep this separate?
+    cook(name);
+    return;
+  }
+  for (obj in useCraftList){
+    switch(true){
+      case nextTo('craftingtable'):
+        //try to craft if craftingtable popup is active
+        if (playerCrafting){
+          //add to crafting popup queue
+          //popup detects if player walked away from crafting table and removes items from queue
+          return;
+        }
+        //break;that way if next to table but !crafting, goes to next in precedence
+        //eg) could now put things next to each other
+    }
+  }
+  //if here, not next to fire. need a general nextTo("fire") type function
+  //could have list of precedence, for obj in nextTo: nextTo[obj] >> do thing
+/*
   switch(name){
     case "fish":
       cook(name);
@@ -686,11 +1033,15 @@ function useItem(name){//maybe make a separate file of player related functions?
       eat(name);
       break;
   }
+*/
 }
 
 function addToInv(name){
+  if (name in playerObjects){
+    player.inventory.push({"name":name, "itemObj":new pObjList[name]});
+    return;
+  }
   if (player.inventory.find(obj => obj.name === name)){
-    //player.inventory['logs'].amt +=1;
     let invPos = player.inventory.findIndex(obj => obj.name ===name);
     player.inventory[invPos].amt += 1;
   } else {
@@ -763,11 +1114,19 @@ function Player(){
     }
   }
   this.usableItems = ['fish', 'cookedfish'];
+  //equip is really just player use
   this.equip = function(){//if item equipped, unequip it. if not equipped, equip it.
                               //if item equipped and equipping a different item, switch it.
                               //item 
     let itemObject = player.inventory[player.invPosition].itemObj;
     console.log(itemObject.spriteData.name);
+    //crafting
+    if (playerCrafting){
+      //put item in craftQueue
+      if (craftQueue.length>=20){return;};
+      craftQueue.push(itemObject);
+      return;//could be problematic, but work for now
+    }
     //equip, unequip or switch current item if itemObject.equippable!==undefined
     if (itemObject===player.holding.itemObj){
       //unequip
@@ -916,7 +1275,7 @@ function saveInventoryToLocal(){
       //it an axe or fishing pole etc, see base_tiles.js/playerObjects
       saveList.push({"name":player.inventory[obj].itemObj.spriteData.name, "itemObj":"Axe"});//might can just put null as itemObj, not using it?
     } else {
-      //it something like logs or string that can be directly JSON.stringified
+      //it something like log or string that can be directly JSON.stringified
       saveList.push(player.inventory[obj]);//should work, they aint got functions in em
     }
   }//might have to stringify whole list instead of individual items? we'll see
@@ -987,7 +1346,7 @@ function interactObject(nextX, nextY){
       }
       if (hasFunction(targetObj, "playerInteract")){
         targetObj.playerInteract();
-        interacted = true;
+        interacted = true;//wait was this one necessary?
       }
     }
     
@@ -1007,9 +1366,6 @@ function interactObject(nextX, nextY){
     player.holding.itemObj.action(nextX, nextY);
   }
 }
-
-
-
 
 function interactNext(nextX, nextY){
   if (master_collision===true){
@@ -1138,8 +1494,22 @@ function drawInv(){
       275,240, 20,20)
   } else {
     //draw inventory position
-    ctx.drawImage(spriteSheet, player.inventory[player.invPosition].itemObj.spriteData.itemSprite[0], player.inventory[player.invPosition].itemObj.spriteData.itemSprite[1], 16,16
-      ,275,240, 20,20);
+    if (player.inventory[player.invPosition].itemObj.spriteData.name==="scroll"){
+      ctx.drawImage(spriteSheet, baseTiles['scroll'][0], baseTiles['scroll'][1], 16, 16,
+        275, 240, 20,20);
+      //then have to see if it a player obj or other type obj //pObjList
+      let overlaySprite = null;//coords
+      if (player.inventory[player.invPosition].itemObj.spriteData.scroll in playerObjects){
+        overlaySprite = playerObjects[player.inventory[player.invPosition].itemObj.spriteData.scroll].itemSprite;
+      } else {
+        overlaySprite = baseTiles[player.inventory[player.invPosition].itemObj.spriteData.name];
+      }
+      ctx.drawImage(spriteSheet, overlaySprite[0], overlaySprite[1], 16, 16,
+        275+6, 240+2, 8,8);  
+    } else {
+      ctx.drawImage(spriteSheet, player.inventory[player.invPosition].itemObj.spriteData.itemSprite[0], player.inventory[player.invPosition].itemObj.spriteData.itemSprite[1], 16,16
+        ,275,240, 20,20);
+    }
   }
   //draw arrows baseTile['upArrow'/'downArrow']
   ctx.drawImage(spriteSheet, baseTiles['upArrow'][0], baseTiles['upArrow'][1], 16,16
@@ -1236,7 +1606,6 @@ function Fishingpole(){
           }, 1000)
           player.incrementSkill('fishing', 1);
           if (player.inventory.find(obj => obj.name === 'fish')){//going to change to random fish or randomize fish in pool
-            //player.inventory['logs'].amt +=1;
             let invPos = player.inventory.findIndex(obj => obj.name ==='fish');
             player.inventory[invPos].amt += 1;
           } else {
@@ -1279,12 +1648,11 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
         playSound(chop);
         if (player.skills.woodcutting.lvl>=Math.floor(Math.random()*25)){
           player.incrementSkill('woodcutting', 1);
-          if (player.inventory.find(obj => obj.name === 'logs')){
-            //player.inventory['logs'].amt +=1;
-            invPos = player.inventory.findIndex(obj => obj.name ==='logs');
+          if (player.inventory.find(obj => obj.name === 'log')){
+            invPos = player.inventory.findIndex(obj => obj.name ==='log');
             player.inventory[invPos].amt += 1;
           } else {
-            player.inventory.push({'name':'logs', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
+            player.inventory.push({'name':'log', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
           }
           tile_map[x][y].objects.splice(object,1);
           tile_map[x][y].objects.push(gameObjects['stump1']);
@@ -2033,6 +2401,7 @@ function update(){
     drawStats();
     drawInv();//testing until better inv UI
     drawSign();
+    drawCraft();
   } else {
     deathScreen();
   }
@@ -2063,6 +2432,8 @@ setTimeout(() => {
     }
     raftID = playerRaft.spriteData.id;
     game_objects.push(playerRaft);
+    game_objects.push(new craftingTable(50, 80));
+    game_objects.push(new Treasurechest2(50, 82, "scroll", "fishingpole"))
   } 
   else if (localStorage.getItem("tileMapSector")==="northsea"){
     let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));

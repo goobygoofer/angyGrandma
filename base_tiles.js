@@ -90,8 +90,11 @@ baseTiles = {//redo entirely and in order
     "sail":[144,1264],//draw raft > player > sail
     "key":[16, 848],
     "coin":[176,240],
+    "craftingtable":[192,528],
+    "scroll":[160, 1264],
     //letters here
-    "F":[80,768]
+    "F":[80,768],
+    "C":[32,768]
     //end letters
   }
 
@@ -157,6 +160,24 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "scroll":{
+        "name":"scroll",
+        "sprite":baseTiles['scroll'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['scroll'],
+        "scroll":null,//put what recipe it is (eg "ironsword" or "fishingpole", overlay sprite pulled from baseTiles)
+        "ingredients":null//and it's ingredients so player can read recipe, maybe they're a bit cryptic heheh
+        //need another way to interact with items to read scroll
+    },
+    "craftingtable":{
+        "name":"craftingtable",
+        "id":null,
+        "sprite":baseTiles['craftingtable'],
+        "type":"object",
+        "collision":true,
+        "itemSprite":baseTiles['craftingtable']//wait, these necessary for craftingtable/raft etc?
     },
     "raft":{
         "name":"raft",
