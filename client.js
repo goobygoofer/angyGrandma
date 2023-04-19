@@ -148,7 +148,7 @@ function drawStats(){
     ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 20,75);
     ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 20, 90);
     ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 20, 105);
-    ctx.fillText("fishing xp: " + player.skills.fishing.xp + "(" + player.skills.woodcutting.lvl + ")", 20, 120);
+    ctx.fillText("fishing xp: " + player.skills.fishing.xp + "(" + player.skills.fishing.lvl + ")", 20, 120);
     ctx.fillText("crafting xp: " + player.skills.crafting.xp + "(" + player.skills.crafting.lvl + ")", 20, 135)
     ctx.fillText("survival xp: " + player.skills.survival.xp + "(" + player.skills.survival.lvl + ")", 20, 150);
   }
