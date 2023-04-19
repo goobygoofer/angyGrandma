@@ -67,8 +67,8 @@ baseTiles = {//redo entirely and in order
     "axeItem":[64,64],
     "statDisp":[80, 624],
     "log":[96, 0],
-    "upArrow":[80,976],
-    "downArrow":[96, 976],
+    "upArrow":[80,975],
+    "downArrow":[96, 975],
     "hpIcon":[160,832],
     "string":[80,240],//probably another object like logs where no actual object (like Axe), just inv obj and sprite obj
     "fPoleR":[0,496],
@@ -93,11 +93,13 @@ baseTiles = {//redo entirely and in order
     "craftingtable":[192,528],
     "scroll":[160, 1264],
     "apple":[304,160],
+    "trashcan":[128,752],
     //letters here
     "F":[80,768],
     "C":[32,768],
     "hitOutlineLeft":[112,176],
-    "hitOutlineRight":[62,176]
+    "hitOutlineRight":[62,176],
+    "hide":[224,272],
     //end letters
   }
 
@@ -194,7 +196,8 @@ playerObjects = {
         "name":"sail",
         "sprite":baseTiles['sail'],
         "type":"object",
-        "collision":false
+        "collision":false,
+        "itemSprite":baseTiles['sail']
     },
     "apple":{
         "name":"apple",
@@ -208,6 +211,13 @@ playerObjects = {
         "sprite":baseTiles['web'],
         "type":"object",
         "collision":false
+    },
+    "hide":{
+        "name":"hide",
+        "sprite":baseTiles['hide'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['hide']  
     },
     "key":{
         "name":"key",
@@ -493,6 +503,12 @@ playerObjects = {
         "sprite":baseTiles['stump1'],
         "type":"object",
         "collision":false,
+    },
+    "trashcan":{
+        "name":"trashcan",
+        "sprite":baseTiles['trashcan'],
+        "type":"object",
+        "collision":true
     },
     "campfire":{
         "name":"campfire",

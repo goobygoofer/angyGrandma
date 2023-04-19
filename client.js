@@ -165,28 +165,57 @@ function drawStats(){
 let overlayCanvas;
 let overlayCtx;
 let offset = 0;
-function drawXpDrop(skill, xp){//instead add to an xp queue in update
-  offset+=100;
-  if (offset>500){
-    offset = 0;
-  }
-  console.log(skill);
-  if (skill==="walking"){return};
+let dropList = [];//for dropObj put in {"text": text, "amount": null, "coords":[[x1,y1], [x2,y2]],...}
+              // drop list gen'd by another fxn. make all coords same if message to just display in place
+              //for a drop, do {"text":skillname, "amount":skillxp, "coords":dropCoords()};
+
+function dropCoords(drop=true){
   let y = 10 * BLOCKSIZE;
-  setTimeout(() => {
-    const id = setInterval(() => {
+  let coords = [];
+  if (!drop){
+    //generate 10 coords of the same value
+    for (let i=0;i<30;i++){
+      coords.push([25, y+135]);//will have to see how this one works
+    }
+  } else {
+    //generate 10 coords: let y = 10 * BLOCKSIZE; 
+    for (let i=0;i<30;i++){
+      coords.push([150, y]);
       y -= Math.floor(BLOCKSIZE/3);
-      overlayCtx.clearRect(0,0, overlayCanvas.width, overlayCanvas.height);
-      overlayCtx.fillStyle="rgba(255,0,255,0.5)"
-      overlayCtx.fillRect(150, y-BLOCKSIZE/2, 100,10);
-      overlayCtx.fillStyle="gold";
-      overlayCtx.fillText(`${skill} +${xp}`, 150, y);
-      if (y <= BLOCKSIZE){
-        overlayCtx.clearRect(0,0, overlayCanvas.width, overlayCanvas.height);
-        clearInterval(id);
+    }
+  }
+  return coords;
+}
+
+function drawXpDrop(){//instead add to an xp queue in update. originally skill, xp
+  if (dropList.length>0){
+    let drop;
+    for (drop in dropList){
+      //draw dropList[drop].text & amount at dropList[drop].coords[0], then shift list
+      if (dropList[drop].coords.length===0){
+        dropList.splice(drop, 1);
       }
-    },40);
-  }, offset);
+      if (dropList.length===0){
+        return;
+      }
+      let amount;
+      if (!dropList[drop].amount){
+        amount = " ";
+      } else {
+        amount = ` : ${dropList[drop].amount}`;
+      }
+      ctx.fillStyle="rgb(0,0,0,0.5)";
+      ctx.fillRect(dropList[drop].coords[0][0], dropList[drop].coords[0][1]-8, dropList[drop].text.length*5 + amount.length*5 ,10)
+      ctx.fillStyle="gold";
+      ctx.fillText(dropList[drop].text + amount, dropList[drop].coords[0][0], dropList[drop].coords[0][1]);
+      dropList[drop].coords.shift();
+    }
+  }
+}
+
+let msgOffset = 0;
+function overlayMessage(text){
+  
 }
 
 //interactable objects////////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,7 +287,10 @@ function drawCraft(){
 
 //function for C listeners
 //
-let craftableItems = {"fishingpole":{"log":1, "string":1}};//
+let craftableItems = {//test this in separate file cause it could get long
+  "fishingpole":{"log":1, "string":1},
+  "sail":{"log":4, "string":4, "hide":2}
+};//
 
 function craftItem(){
   let currentItem = null;//scroll here
@@ -312,6 +344,11 @@ function craftItem(){
   player.incrementSkill("crafting", craftingExp);
   craftQueue = [];
   addToInv(currentItem);
+  dropList.push({//remember, pushing to droplist gets drawn by drawXpDrop
+    "text":`You crafted a ${currentItem}.`,
+    "amt":null,
+    "coords":dropCoords(false)
+  });
 }
 
 let playerCrafting = false;
@@ -355,6 +392,7 @@ function Sign(x, y, message){//these *could* be reconstituted, but for now just 
   game_object_ids.push(this.spriteData.id);
   tile_map[x][y].objects.push(this.spriteData);
   this.playerInteract=function(){
+    if (showSign){return;};//trying to prevent sign bug
     this.lastX = playerX;
     this.lastY = playerY;
     //display a message for the player
@@ -371,7 +409,7 @@ function Sign(x, y, message){//these *could* be reconstituted, but for now just 
         this.lastY=null;
         clearInterval(this.displayInterval);
       }
-    }, 250);
+    }, 100);
   }
 }
 
@@ -405,6 +443,18 @@ function Raft(x, y){
     tile_map[this.x][this.y].objects.push(this.spriteData);
   }
   this.playerInteract = function(){
+    if (player.inventory.findIndex(obj => obj.name==="sail")===-1){
+      return;//no sail? no sail.
+    }
+    let sailPos = player.inventory.findIndex(obj => obj.name==="sail");
+    if (player.inventory[sailPos].amt<=0){
+      dropList.push({
+        "text":"The raft lacks a sail.",
+        "amount":null,
+        "coords":dropCoords(false)
+      });
+      return;
+    }
     localStorage.setItem("playerSailing", JSON.stringify(true));
     //boat always in water, next to a path (can be on land or in water)
     //bool playerSailing = true; (changing from false)
@@ -412,7 +462,12 @@ function Raft(x, y){
     playerX = this.x;
     playerY = this.y;
     //remove spriteData from tile (add back when player disembarks)
-    tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);//should work   
+    tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);//should work 
+    dropList.push({
+      "text":"You hoist the sail and shove off from the dock.",
+      "amount":null,
+      "coords":dropCoords(false)
+    });
   }
 }
 
@@ -424,14 +479,15 @@ function Treasurechest2(x, y, item, scroll=null, popupText=null){//popup text te
   this.y=y;
   tile_map[this.x][this.y].objects.push(this.spriteData);
   this.playerInteract = function(){
-    //if player has key (dropped by skeleton by chance)
-    //just like loot bag, maybe could combine fxns?
-    /*
-    if (!player.inventory.some(obj => obj.hasOwnProperty(item) && obj[item]===item)){
-      player.inventory.push({"name":item, "itemObj":new pObjList[name]})
-    }
-    */
-
+   let keyPos = player.inventory.findIndex(obj => obj.name ==="key");
+   if (keyPos===-1){return;};//ya don't got no keys
+   if (player.inventory[keyPos].amt <= 0){return;};//ya got a key holder but no keys
+   dropList.push({
+    "text":`You open the chest and find a ${item}`,
+    "amount":null,
+    "coords":dropCoords(false)
+   })
+   player.inventory[keyPos].amt -= 1;//player uses key
    if (item in playerObjects){
        player.inventory.push({"name":item, "itemObj":new pObjList[item]})
    } else if (scroll === null){
@@ -921,8 +977,18 @@ function eat(name){
     } else{
       heals = foodInfo[name].health;
     }
+    let eatText = '';
+    if (heals>0){
+      eatText = `You eat the ${name} and you feel invigorated.`;
+    } else {
+      eatText = `You eat the ${name} without checking it first and you get sick!`;
+    }
+    dropList.push({
+      "text":eatText,
+      "amount":null,
+      "coords":dropCoords(false)
+    })
     player.inventory[invPos].amt-=1;
-    console.log(`you eat the ${name}`);
     player.skills.health.health+=heals;
     if (player.skills.health.health > player.skills.health.max){
       player.skills.health.health = player.skills.health.max;
@@ -957,15 +1023,10 @@ function nextTo(name){//this can prob replace nextToFire
 
 function useItem(name){//maybe make a separate file of player related functions? (like hyggeland bulk)
   console.log(name);
-  //function assumes name got here because it is in usableObjects
-
-  //NOTE: find out what player is next to, *then* do appropriate switch case (i.e. fire, craft table, etc)
-  //maybe standing on takes precedent? is standing next to fire but standing on craft table craft override
-  //that being said, keep items more than 1 space apart to avoid stupid
-  //edible foods get switch case first? in case player gotta eat quick!
-  //this would mean edibles cant be used other than for eating, fair
-
-  //eat food takes precedence
+  if (nextTo('campfire') && name in foodInfo){//maybe best to keep this separate?
+    cook(name);
+    return;
+  }
   switch(name){
     case "cookedfish":
     case "fish":
@@ -973,39 +1034,8 @@ function useItem(name){//maybe make a separate file of player related functions?
     //other edible cases here
       eat(name)
       return;
-  }//else goes to see what is around player that takes precedence
+  }
 
-  //precedence level after eat: craft(crafting table), cook(campfire)
-  if (nextTo('campfire') && name in foodInfo){//maybe best to keep this separate?
-    cook(name);
-    return;
-  }
-  let obj;
-  for (obj in useCraftList){
-    switch(true){
-      case nextTo('craftingtable'):
-        //try to craft if craftingtable popup is active
-        if (playerCrafting){
-          //add to crafting popup queue
-          //popup detects if player walked away from crafting table and removes items from queue
-          return;
-        }
-        //break;that way if next to table but !crafting, goes to next in precedence
-        //eg) could now put things next to each other
-    }
-  }
-  //if here, not next to fire. need a general nextTo("fire") type function
-  //could have list of precedence, for obj in nextTo: nextTo[obj] >> do thing
-/*
-  switch(name){
-    case "fish":
-      cook(name);
-      break;
-    case "cookedfish":
-      eat(name);
-      break;
-  }
-*/
 }
 
 function addToInv(name){
@@ -1036,7 +1066,9 @@ function Player(){
     "health":{"xp":0,"health":100,"max":100, "lvl":1},
     "playerLvl":1,
     "woodcutting":{"xp":0,"lvl":1},
-    "fishing":{"xp":0, "lvl":1}
+    "fishing":{"xp":0, "lvl":1},
+    "crafting":{"xp":0, "lvl":1},
+    "survival":{"xp":0, "lvl":1}
   };
   this.inventory = [];
   this.lastInventory = JSON.stringify(this.inventory);
@@ -1046,7 +1078,7 @@ function Player(){
     "itemObj":null,//remove item object from inventory and put it here
   };
   this.update = function(){
-    if (nextToFire()){
+    if (nextTo('campfire')){
       this.regenTime = 2000;
     } else {
       this.regenTime = 5000;
@@ -1102,6 +1134,25 @@ function Player(){
       return;//could be problematic, but work for now
     }
     //equip, unequip or switch current item if itemObject.equippable!==undefined
+    if (nextTo('trashcan') && itemObject!==player.holding.itemObj){//next to can and don't have it equipped? chunk it into the abyss
+      player.inventory.splice(player.invPosition,1);
+      dropList.push({
+        "text":"You throw the item into the trashcan, although it is more like a black hole.",
+        "amount":null,
+        "coords":dropCoords(false)
+      });
+    }
+    if (nextTo('stump3') || nextTo('stump2')){//2 & 3 look the same, prob get rid of one lol
+      if (player.inventory[player.invPosition].name==="log" && player.holding.name==="axe"){
+        //split logs, add new or increment in player.inventory
+        //split logs will have to be new item, possibly new sprite
+        dropList.push({
+          "text":"You split a log.",
+          "amount":null,
+          "coords":dropCoords(false)
+        });
+      }
+    }
     if (itemObject===player.holding.itemObj){
       //unequip
       player.holding={"name":"nothing", "itemObj":null};
@@ -1116,14 +1167,34 @@ function Player(){
       //    eg) holding axe, use log, standing on
       useItem(itemObject.spriteData.name);
     }
+    if (player.inventory[player.invPosition].name==="scroll"){
+      let recipeText = '';
+      recipeText += `${player.inventory[player.invPosition].itemObj.spriteData.scroll}: `;
+      let ingredient;
+      for (ingredient in craftableItems[player.inventory[player.invPosition].itemObj.spriteData.scroll]){
+        recipeText += ` ${ingredient}:${craftableItems[player.inventory[player.invPosition].itemObj.spriteData.scroll][ingredient]}`
+      }
+      dropList.push({
+        "text":recipeText,
+        "amount":null,
+        "coords":dropCoords(false)
+      })
+    }
   }//look below!
 
   //need a craft function activated by clicking/pressing/tapping C. that way can have usableItems and craftableItems
 
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
-    if (showDrops){
-      drawXpDrop(skill, amount);
+
+    if (showDrops && skill!=="walking"){
+      offset+=200;
+      if (offset>1000){
+        offset = 0;
+      }
+      setTimeout(() => {
+        dropList.push({"text":skill, "amount":amount, "coords":dropCoords()});
+      },offset);
     }
     
     //localStorage['playerStats']=JSON.stringify(this.skills);
@@ -1146,15 +1217,20 @@ function Player(){
     }
   }
   this.attack = function(target){
+    console.log(target);
     let bonus = 0;
     if (this.holding.name!=="nothing"){
       bonus = this.holding.itemObj.attBonus;
     }
     if (playerSailing){
       this.skills.health.health-=Math.floor(Math.random()*25);
-      this.incrementSkill("strength", -5);
-      this.incrementSkill("survival", -5);
-      console.log("you slip and bust your ass on the raft trying to be cute and attacking from the water");
+      this.incrementSkill("strength", -10);
+      this.incrementSkill("survival", -10);
+      dropList.push({
+        "text":"You slip and bust your ass in the raft trying to be cute...",
+        "amount":null,
+        "coords":cropCoords(false)
+      })
     }
     target.getAttacked(this.skills.strength.lvl + bonus);
     playSound(hit_sound);
@@ -1259,7 +1335,7 @@ function saveInventoryToLocal(){
   for (obj in player.inventory){
     if (player.inventory[obj].itemObj.spriteData.name in playerObjects){
       //it an axe or fishing pole etc, see base_tiles.js/playerObjects
-      saveList.push({"name":player.inventory[obj].itemObj.spriteData.name, "itemObj":"Axe"});//might can just put null as itemObj, not using it?
+      saveList.push({"name":player.inventory[obj].itemObj.spriteData.name, "itemObj":null});//might can just put null as itemObj, not using it?
     } else {
       //it something like log or string that can be directly JSON.stringified
       saveList.push(player.inventory[obj]);//should work, they aint got functions in em
@@ -1484,7 +1560,7 @@ function drawPlayer(){
 }
 
 function drawInv(){
-  ctx.fillStyle = "rgba(139, 69, 19, 0.5)";
+  ctx.fillStyle = "rgba(139, 69, 19, 0.75)";
   ctx.fillRect(275, 240, 20,20);
   if (player.inventory.length===0){
     //draw x for inv item
@@ -1492,6 +1568,9 @@ function drawInv(){
       275,240, 20,20)
   } else {
     //draw inventory position
+    if (!player.inventory[player.invPosition] && !player.inventory[player.invPosition]){
+      player.invPosition=0;//seems to fix bug where inventory UI disappears on deleting certain items
+    }
     if (player.inventory[player.invPosition].itemObj.spriteData.name==="scroll"){
       ctx.drawImage(spriteSheet, baseTiles['scroll'][0], baseTiles['scroll'][1], 16, 16,
         275, 240, 20,20);
@@ -1508,6 +1587,15 @@ function drawInv(){
       ctx.drawImage(spriteSheet, player.inventory[player.invPosition].itemObj.spriteData.itemSprite[0], player.inventory[player.invPosition].itemObj.spriteData.itemSprite[1], 16,16
         ,275,240, 20,20);
     }
+    ctx.fillStyle="white";
+    let itemAmt = player.inventory[player.invPosition].amt;
+    if (player.inventory[player.invPosition].itemObj.spriteData.name in playerObjects){
+      itemAmt = 1;
+    }
+    else if (!itemAmt){
+      itemAmt=0;
+    }
+    ctx.fillText(`${itemAmt}`,275,247)
   }
   //draw arrows baseTile['upArrow'/'downArrow']
   ctx.drawImage(spriteSheet, baseTiles['upArrow'][0], baseTiles['upArrow'][1], 16,16
@@ -1596,7 +1684,7 @@ function Fishingpole(){
       this.isFishing = setTimeout(() =>{
         tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
         console.log("something is tugging at the line!");
-        if (player.skills.fishing.lvl>=Math.floor(Math.random()*15)){
+        if (player.skills.fishing.lvl>=Math.floor(Math.random()*5)){
           //draw fish on next tile
           tile_map[x][y].objects.push(gameObjects['fish']);
           setTimeout(() => {
@@ -1769,6 +1857,17 @@ function checkCollision(nextX, nextY, npc=false){
         getSpriteDataById(game_objects, raftID)
       );
       localStorage.setItem("raftLoc", JSON.stringify([playerRaft.x, playerRaft.y]));
+      //chance to break sail when disembarking
+      //need fxn removeFirstOfItem(name);
+      if (Math.floor(Math.random()*player.skills.survival.lvl) < Math.floor(Math.random()*30)){
+        //sail breaks, remove one from player inventory
+        dropList.push({
+          "text":"You clipped the pier and broke your sail!",
+          "amount":null,
+          "coords":dropCoords(false)
+        });
+        removeFirstOfItem("sail");
+      }
       return false;
     }
     else {
@@ -1865,6 +1964,17 @@ function getSpriteDataById(arr, id){
   }
 }
 
+function removeFirstOfItem(name){
+  //removes first item it comes across in player inventory
+  let position = player.inventory.findIndex(obj => obj.name===name);
+  if (player.inventory[position].name === "scroll" || player.inventory[position].name in playerObjects){
+    player.inventory.splice(position, 1);
+  } else {
+    player.inventory[position].amt-=1;
+  }
+  
+}
+
 //if you're wondering why the fuck all these are here, I am too XD
 //end utility functions///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1930,8 +2040,6 @@ function trackPlayer(ratX, ratY) {//lol it doesn't matter, but they arent all ra
   }
   return nextMove;
 }
-
-
 
 function distToPlayer(selfX, selfY){
   let dx = selfX - playerX;
@@ -2043,6 +2151,7 @@ function Rat(){
   this.strength = 2;
   this.update = function(){
     if (this.hp<1){
+      game_objects.push(new Lootbag("rat", this.x, this.y, "hide"));
       player.incrementSkill("strength", 5);
       player.incrementSkill("health", 3);
       playSound(skele_die_sound);
@@ -2273,8 +2382,6 @@ function drawSign(){
   }
 }
 
-
-
 function drawWeather(x,y){
   //for now just draw rain on random tiles
   if (raining===true){
@@ -2397,7 +2504,6 @@ function update(){
   //game logic here
   if (!death){
     ctx.clearRect(0,0,300,300);
-    //uddate player
     updateNPCs();
     player.update();
     if (!bigMap){
@@ -2412,13 +2518,11 @@ function update(){
     drawInv();//testing until better inv UI
     drawSign();
     drawCraft();
+    drawXpDrop();
   } else {
     deathScreen();
   }
 }
-
-
-
 
 //function mapLoaded(){
 setTimeout(() => {
@@ -2428,10 +2532,12 @@ setTimeout(() => {
     game_objects.push(new Sign(24, 22, "                    Welcome to Canvas II: Ghosts!                      At the bottom right is your inventory, scroll through with the arrows and press/click/tap F to use/equip the item. Walk into stuff to interact with it. Equip a weapon and go fight something!"))
     game_objects.push(new Sign(23, 62, "                    Archibald Village              PLEASE DO NOT FEED THE RATS"));
     game_objects.push(new Sign(33, 61, "                         Cellar"));
-    game_objects.push(new Sign(48, 78, "                    Miia's Nail House                                  This house was built to appease the legendary Miss Miia, else she won't play the game"));
+    game_objects.push(new Sign(48, 78, "                    Miia's Nail House                                  To learn how to craft an item, find recipe scrolls. Walk into the crafting table and put the scroll and appropriate items in the queue with F. You only need to queue one of each item regardless of how many the recipe calls for. Craft the item with C. You won't lose the scroll but the ingredients will be removed from your inventory."));
     game_objects.push(new Sign(76, 83, "                    Theunorg's Chapel"));
     //pier near house, boat to be added
-    game_objects.push(new Sign(34, 38, "Gone fishing, charters to resume soon..."));
+    game_objects.push(new Sign(34, 38, "Gone fishing, charters to resume soon...                 Someone stole the sail to the raft, so you'll have to make a new one. If you've never made one before, I think I have some instructions for crafting one somewhere in my house north of here.                              -Fish Monger"));
+    tile_map[48][29].objects.pop()//removing an old useless chest instead of just editing the map lol
+    game_objects.push(new Treasurechest2(48, 29, "scroll", "sail"));//new chest with sail scroll
     let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
     if (!raftLoc){
       raftLoc = [34, 42];
@@ -2443,7 +2549,9 @@ setTimeout(() => {
     raftID = playerRaft.spriteData.id;
     game_objects.push(playerRaft);
     game_objects.push(new craftingTable(50, 80));
-    game_objects.push(new Treasurechest2(50, 82, "scroll", "fishingpole"))
+    game_objects.push(new Treasurechest2(50, 82, "scroll", "fishingpole"));
+    tile_map[34][56].objects.push(gameObjects['trashcan']);
+    game_objects.push(new Sign(34, 57, "                        WARNING                            Stand next to the trashcan and try to use an item and it will be thrown away forever! Throw your duplicate/deprecated items in here or when you want to start from scratch. Even if you delete your axe, you always start with a new one"));
   } 
   else if (localStorage.getItem("tileMapSector")==="northsea"){
     let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
@@ -2465,17 +2573,6 @@ setTimeout(() => {
 
   //end hotfixes//////////////////maybe could put these in separate hotfix.js/////////////////////////////////////
 
-  //player in boat and reloaded page or sailed to different section of map
-  overlayCanvas = document.createElement('canvas');
-  overlayCanvas.width = canvas.width;
-  overlayCanvas.height = canvas.height;
-  overlayCanvas.style.position = 'absolute';
-  overlayCanvas.style.top = canvas.offsetTop + 'px';
-  overlayCanvas.style.left = canvas.offsetLeft + 'px';
-  overlayCanvas.style.zIndex = '1'; // Set the z-index higher than the original canvas
-  overlayCanvas.style.pointerEvents = 'none';
-  document.body.appendChild(overlayCanvas);
-  overlayCtx = overlayCanvas.getContext('2d');
+  //player in boat and reloaded page or sailed to different section of map  ///<<<why is that there?! what used to be here?!
   setInterval(update,100)
-},4000);//or update only when user moves or places a tile, need to add modes
-//}
+},4000);
