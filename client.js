@@ -670,7 +670,9 @@ document.addEventListener('keydown', (event) => {//this doesn't work right
         player.equip();
         break;
       case ' ':
-        placeTile(objectToPlace);
+        if (masterDebug){
+          placeTile(objectToPlace);
+        }
         break;
       case 'ArrowUp':
       case 'w':
