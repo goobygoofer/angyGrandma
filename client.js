@@ -79,6 +79,16 @@ function toggleCollision(){
     master_collision=false;
   }
 }
+
+var showDrops = true;
+function toggleDrops(){
+  if (showDrops){
+    showDrops = false;
+  } else {
+    showDrops = true;
+  }
+}
+
 var raining = false;
 function toggleRain(){
   if (raining===true){
@@ -131,14 +141,16 @@ function drawStats(){
   } else {
     ctx.fillStyle="rgba(139, 69, 19, 0.5)";
     ctx.font = '10px Arial';
-    ctx.fillRect(0, 225, 125, 55);
+    ctx.fillRect(3, 50, 125, 235);
     ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
     ctx.fillStyle="white";
-    ctx.fillText("health       : " + player.skills['health']['health'] + "/" + player.skills.health.max, 25,240);
-    ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 25,250);
-    ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 25, 260);
-    ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 270);
-    ctx.fillText("fishing xp: " + player.skills.fishing.xp + "(" + player.skills.woodcutting.lvl + ")", 25, 280);
+    ctx.fillText("health       : " + player.skills['health']['health'] + "/" + player.skills.health.max, 20,60);
+    ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 20,75);
+    ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 20, 90);
+    ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 20, 105);
+    ctx.fillText("fishing xp: " + player.skills.fishing.xp + "(" + player.skills.woodcutting.lvl + ")", 20, 120);
+    ctx.fillText("crafting xp: " + player.skills.crafting.xp + "(" + player.skills.crafting.lvl + ")", 20, 135)
+    ctx.fillText("survival xp: " + player.skills.survival.xp + "(" + player.skills.survival.lvl + ")", 20, 150);
   }
   //draw hp bar:
   ctx.fillStyle="rgba(255,0,0,0.5)";
@@ -150,8 +162,34 @@ function drawStats(){
     0,270, 25, 25);
 }
 
+let overlayCanvas;
+let overlayCtx;
+let offset = 0;
+function drawXpDrop(skill, xp){//instead add to an xp queue in update
+  offset+=100;
+  if (offset>500){
+    offset = 0;
+  }
+  console.log(skill);
+  if (skill==="walking"){return};
+  let y = 10 * BLOCKSIZE;
+  setTimeout(() => {
+    const id = setInterval(() => {
+      y -= Math.floor(BLOCKSIZE/3);
+      overlayCtx.clearRect(0,0, overlayCanvas.width, overlayCanvas.height);
+      overlayCtx.fillStyle="rgba(255,0,255,0.5)"
+      overlayCtx.fillRect(150, y-BLOCKSIZE/2, 100,10);
+      overlayCtx.fillStyle="gold";
+      overlayCtx.fillText(`${skill} +${xp}`, 150, y);
+      if (y <= BLOCKSIZE){
+        overlayCtx.clearRect(0,0, overlayCanvas.width, overlayCanvas.height);
+        clearInterval(id);
+      }
+    },40);
+  }, offset);
+}
+
 //interactable objects////////////////////////////////////////////////////////////////////////////////////////////////
-//except for map, this is way too messy and broken for life rn, shelve until pruned////////////////////////HEY ASSHOLE
 var game_object_ids = [];
 var game_objects = [];//maybe npc and object ids all go in game_obj_ids, but npcs and game_objects still separate? idk
 function dungeonStairs(x, y, switchTo=[]){
@@ -176,14 +214,6 @@ function dungeonStairs(x, y, switchTo=[]){
 
 function drawCraft(){
   if (playerCrafting){
-    //draw craft popup x in corner, C button
-    //fillStyle
-    //fillRect
-    //crafting X and C listeners (for the popup and keystrokes) only work if playerCrafting
-    //within rect,
-    //  for obj in craftQueue,
-    //      draw obj to popup, increment 18 pixels per item
-    //      account for wrap around list, prob 8 items per row and a max #of craft items in queue?
     ctx.fillStyle = "rgba(139, 69, 19, 0.75)";
     ctx.fillRect(75, 100, 175, 100);
     ctx.drawImage(spriteSheet, baseTiles['C'][0], baseTiles['C'][1], 16, 16,
@@ -231,27 +261,12 @@ function drawCraft(){
 let craftableItems = {"fishingpole":{"log":1, "string":1}};//
 
 function craftItem(){
-  //check for scroll in craftQueue
-  //  if no scroll, return, alert player craft failed
-  //  else
-  //    check queue scroll name in craftableItems
-  //    compare item amounts in player inventory
-  //    
-  //basically same as old function after that:
-  
-  //currentItem = item;//scroll now determines this
   let currentItem = null;//scroll here
   //defaults on first scroll in queue
   let scroll;
   let scrollPos;//scroll position to skip in raw item loop
   for (scroll in craftQueue){
     if (craftQueue[scroll].spriteData.scroll){
-      //scroll is just plain scroll, could reuse for other similar mechanisms (advanced cooking, etc)
-      //you get them as rewards or finding them or learning from npc
-      //edit spriteData.scroll to be item name (eg. "fishingpole"). hardcoding ok here since they are rewards
-      //when player gets a scroll, it draws scroll because name scroll
-      //but then draws item it is recipe for *over* the scroll
-      //because fuck makin a bunch of individual crafting sprites
       currentItem = craftQueue[scroll].spriteData.scroll;
       break;
     }
@@ -284,68 +299,20 @@ function craftItem(){
   }
   //if get here craft item -- subtract required items from player.inventory and add crafted item to 
   let item;
+  let craftingExp = 0;
   for (item in craftableItems[currentItem]){
+    craftingExp+=1;//1 xp per item cost to make item
     //subtract item from player.inventory[invPos]
     let invPos = player.inventory.findIndex(obj => obj.name === item);
     if (player.inventory[invPos].amt){
       player.inventory[invPos].amt -= craftableItems[currentItem][item];
     }//else it a scroll or necessary crafting object
   }
-  //add crafted item to inventory
+  //add crafted item to inventory and increment experience
+  player.incrementSkill("crafting", craftingExp);
   craftQueue = [];
   addToInv(currentItem);
 }
-
-/*
-function craftItem(){
-  if (!playerCrafting){return;};//redundant but good measure probably
-
-  //checking if player has required items, if yes craft and return, else continue on first item that doesn't exist or not enough of
-  let item;
-  let craftGood = true;
-  let currentItem;
-  for (item in craftableItems){
-    console.log(`checking if can make ${item}`)
-    currentItem = item;
-    let rawItem;
-    if (!craftGood){
-      craftGood = true;
-      continue;
-    }
-    for (rawItem in craftQueue){
-      console.log(`checking item ${craftQueue[rawItem]} from in craftQueue`);
-      let invPos = player.inventory.findIndex(obj => obj.name === craftQueue[rawItem].spriteData.name);//player.inventory[invPos].amt to compare
-      console.log(`checking invPos: ${invPos}`);
-      //player doesn't have item in inventory, go to next iter in outer for loop
-      if (invPos===-1){
-        console.log(`player doesn't have ${craftQueue[rawItem].name}`)
-        craftGood = false;
-        break;
-      }
-      if (player.inventory[invPos].amt >= craftableItems[item][player.inventory[invPos].name]){
-        //player has item and enough of it, continue
-        continue;
-      } else {
-        //player has item but not enough, go to next iter in outer for loop
-        craftGood = false;
-        break;
-      }
-    }
-    if (!craftGood){continue};
-    //if get here craft item -- subtract required items from player.inventory and add crafted item to 
-    for (item in craftableItems[currentItem]){
-      //subtract item from player.inventory[invPos]
-      let invPos = player.inventory.findIndex(obj => obj.name === item);
-      player.inventory[invPos].amt -= craftableItems[currentItem][item];
-    }
-    console.log("got out of inner for loop")
-    //add crafted item to inventory
-    craftQueue = [];
-    addToInv(currentItem);
-  }
-  
-}
-*/
 
 let playerCrafting = false;
 let craftQueue = [];
@@ -364,15 +331,6 @@ function craftingTable(x, y){
     this.lastX = playerX;
     this.lastY = playerY;
     playerCrafting=true;
-    //open craft popup -- starts blank, player scrolls through inventory and press F to add item to craftQueue
-    
-    //showCraft();//put with showStats/showSign. 
-
-    //player queues items with F
-    //if playerCrafting, listening for keypress at "C"raft and big red X (craft and exit, rsptvly)
-    //                   //start doing like this so sign, map, other popups etc dont have to have special places on canvas
-    //
-
     this.displayInterval = setInterval(() => {
       if (playerX !== this.lastX || playerY !== this.lastY || !playerCrafting){
         console.log("player walked away from crafting table...");
@@ -454,22 +412,11 @@ function Raft(x, y){
     playerX = this.x;
     playerY = this.y;
     //remove spriteData from tile (add back when player disembarks)
-    tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);//should work
-    //change drawPlayer to draw boat UNDER player, sail OVER player //checks playerSailing bool in drawPlayer
-    
-    //change playerMove to only move on water
-    //  changes with playerX, playerY while playerSailing true
-    //
-    //but if next move includes a path
-    //  disembark
-    //    raft x,y where player disembarks
-    //    playerX, Y onto path
-    //    playerSailing = false
-    //    
+    tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);//should work   
   }
 }
 
-function Treasurechest2(x, y, item, scroll=null){
+function Treasurechest2(x, y, item, scroll=null, popupText=null){//popup text tells what player got
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['chest2']));
   this.spriteData.id = generateID();
   game_object_ids.push(this.spriteData.id);
@@ -484,6 +431,7 @@ function Treasurechest2(x, y, item, scroll=null){
       player.inventory.push({"name":item, "itemObj":new pObjList[name]})
     }
     */
+
    if (item in playerObjects){
        player.inventory.push({"name":item, "itemObj":new pObjList[item]})
    } else if (scroll === null){
@@ -761,6 +709,7 @@ if (masterDebug && document.getElementById("placeButton")!==null && document.get
 
 document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 document.getElementById('stuckButton').addEventListener('click', () => toggleStuck());
+document.getElementById('statDropButton').addEventListener('click', () => toggleDrops());
 
 function isTopLeftClicked(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
@@ -848,7 +797,7 @@ canvas.addEventListener('click', event => {
 
 canvas.addEventListener('touchend', event => {
   if (isCraftingClicked(event.touches[0], canvas)){
-    if (playerCrafting){
+    if (playerCrafting){//this way, C tap icon could be in same place as a button from another popup but doesn't run because playerCrafting !=true etc
       craftItem();
     }
   }
@@ -944,6 +893,12 @@ let foodInfo = {
   "cookedfish":{
     "health":5,//implying positive 2, maybe some food is poisonous! or food health could have chance to heal +/-, etc
     "time":0//might just be for template and not used for basic fish, but timer to detect player move or player pukes
+  },
+  "apple":{
+    "health":3,
+    "time":0,
+    "poison":true,
+    "factor":15
   }
 }
 
@@ -951,10 +906,22 @@ function eat(name){
   //get inv pos
   //if player.inventory[invPos].amt>1, add corresponding hp and subtract 1 from amt
   let invPos = player.inventory.findIndex(obj => obj.name ===name);
+  let heals;
   if (player.inventory[invPos].amt > 0){
+    if (foodInfo[name].poison){
+      let negativePositive = [1,-1];//for either or chance
+      let survivalFactor = Math.floor(Math.random()*player.skills.survival.lvl) + foodInfo[name].health;
+      let poisonFactor = Math.floor(Math.random()*foodInfo[name].factor)*-1;
+      heals = survivalFactor + poisonFactor;//works for now
+      if (heals < 0){
+        player.incrementSkill("survival", 25);
+      }
+    } else{
+      heals = foodInfo[name].health;
+    }
     player.inventory[invPos].amt-=1;
     console.log(`you eat the ${name}`);
-    player.skills.health.health+=foodInfo[name].health;
+    player.skills.health.health+=heals;
     if (player.skills.health.health > player.skills.health.max){
       player.skills.health.health = player.skills.health.max;
     }
@@ -999,6 +966,8 @@ function useItem(name){//maybe make a separate file of player related functions?
   //eat food takes precedence
   switch(name){
     case "cookedfish":
+    case "fish":
+    case "apple":
     //other edible cases here
       eat(name)
       return;
@@ -1009,6 +978,7 @@ function useItem(name){//maybe make a separate file of player related functions?
     cook(name);
     return;
   }
+  let obj;
   for (obj in useCraftList){
     switch(true){
       case nextTo('craftingtable'):
@@ -1057,6 +1027,7 @@ function Player(){
   this.lastTime = Date.now();
   this.lastMove = Date.now();
   this.regenTime=5000;
+  this.gotHit = false;
   this.skills = {
     "walking":{"xp":0,"lvl":1},
     "strength":{"xp":0,"lvl":1},
@@ -1093,7 +1064,8 @@ function Player(){
         }
       } else {
         this.skills.health['health']=this.skills.health.max;
-        localStorage['playerStats']=JSON.stringify(this.skills);
+        //localStorage['playerStats']=JSON.stringify(this.skills);
+        localStorage.setItem("playerStats", JSON.stringify(this.skills));
         //localStorage['playerInv']=JSON.stringify(this.inventory)
         deathScreen();
         localStorage.setItem("playerLoc", JSON.stringify([26,19]));
@@ -1113,7 +1085,7 @@ function Player(){
         }
     }
   }
-  this.usableItems = ['fish', 'cookedfish'];
+  this.usableItems = ['fish', 'cookedfish', 'apple'];
   //equip is really just player use
   this.equip = function(){//if item equipped, unequip it. if not equipped, equip it.
                               //if item equipped and equipping a different item, switch it.
@@ -1148,7 +1120,12 @@ function Player(){
 
   this.incrementSkill = function(skill, amount){
     this.skills[skill].xp+=amount;
-    localStorage['playerStats']=JSON.stringify(this.skills);
+    if (showDrops){
+      drawXpDrop(skill, amount);
+    }
+    
+    //localStorage['playerStats']=JSON.stringify(this.skills);
+    localStorage.setItem("playerStats", JSON.stringify(this.skills));
     //then check if skill leveled up
   }
   this.checkLevelUp = function (skill, hp=false){
@@ -1171,12 +1148,20 @@ function Player(){
     if (this.holding.name!=="nothing"){
       bonus = this.holding.itemObj.attBonus;
     }
+    if (playerSailing){
+      this.skills.health.health-=Math.floor(Math.random()*25);
+      this.incrementSkill("strength", -5);
+      this.incrementSkill("survival", -5);
+      console.log("you slip and bust your ass on the raft trying to be cute and attacking from the water");
+    }
     target.getAttacked(this.skills.strength.lvl + bonus);
     playSound(hit_sound);
   }
   this.getAttacked = function(damage){
+    this.gotHit = true;//checked and turned off in drawPlayer
     this.skills.health['health']-=damage;
-    localStorage['playerStats']=JSON.stringify(this.skills);
+    //localStorage['playerStats']=JSON.stringify(this.skills);
+    localStorage.setItem("playerStats", JSON.stringify(this.skills));
     playSound(hit_sound);
   }
   this.frozen = false;
@@ -1197,16 +1182,7 @@ let player = new Player();
 
 var playerX;
 var playerY;//man why aint these just in Player?
-/*
-if (tileMapSector === "main"){
-  playerX=25;
-  playerY=20;
-} 
-else if (tileMapSector ==="dungeon_1"){
-  playerX=41;
-  playerY=47;
-}
-*/
+
 player.skills.health['health']=player.skills.health.max;
 
 
@@ -1231,6 +1207,12 @@ if (playerStats!==null){
   }
   if (player.skills.fishing===undefined){
     player.skills['fishing']={"xp":0,"lvl":1};
+  }
+  if (!player.skills.crafting){
+    player.skills['crafting']={"xp":0, "lvl":1};
+  }
+  if (!player.skills.survival){
+    player.skills['survival']={"xp":0, "lvl":1};
   }
 }
 //get inventory from local
@@ -1261,10 +1243,12 @@ if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="a
   player.holding={"name":"nothing", "itemObj":null};
   player.inventory.push({"name":"axe", "itemObj":new Axe})
 }
+/*
 if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="fishingpole")){
   //player.holding={"name":"nothing", "itemObj":null};
   player.inventory.push({"name":"fishingpole", "itemObj":new Fishingpole})
 }
+*/
 
 
 function saveInventoryToLocal(){
@@ -1461,8 +1445,14 @@ function movePlayer(direction) {
 
 function drawPlayer(){
     let ghostLoc;
-    if (ghostFacing=="rt"){ghostLoc = ghostR}
-    else {ghostLoc = ghostL};
+    let hitSprite;
+    if (ghostFacing==="rt"){
+      ghostLoc = ghostR
+      hitSprite = baseTiles['hitOutlineRight'];
+    } else {
+      ghostLoc = ghostL
+      hitSprite = baseTiles['hitOutlineLeft'];
+    };
     let drawPointX, drawPointY;
     if (playerX>10){drawPointX=10} else{drawPointX=playerX}
     if (playerY>10){drawPointY=10} else{drawPointY=playerY}
@@ -1473,6 +1463,12 @@ function drawPlayer(){
     }
     ctx.drawImage(spriteSheet, ghostLoc[0],ghostLoc[1], 16,16,
         drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16,16);
+    if (player.gotHit){
+      console.log("drawing player hit");
+      player.gotHit = false;
+      ctx.drawImage(spriteSheet, hitSprite[0], hitSprite[1], 16,16,
+        drawPointX*BLOCKSIZE-BLOCKSIZE-1, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
+    }
     //then draw any items player is wearing/holding, probably wearing first
     if (player.holding.name!=="nothing"){
       ctx.drawImage(spriteSheet, player.holding.itemObj.spriteData.holdSprite[ghostFacing][0], player.holding.itemObj.spriteData.holdSprite[ghostFacing][1],
@@ -1481,7 +1477,7 @@ function drawPlayer(){
     //if playerSailing, overlay sail
     if (playerSailing){
       ctx.drawImage(spriteSheet, baseTiles['sail'][0], baseTiles['sail'][1], 16,16,
-      drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
+      drawPointX*BLOCKSIZE-BLOCKSIZE-2, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
     }
 }
 
@@ -1598,13 +1594,14 @@ function Fishingpole(){
       this.isFishing = setTimeout(() =>{
         tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
         console.log("something is tugging at the line!");
-        if (player.skills.fishing.lvl>=Math.floor(Math.random()*25)){
+        if (player.skills.fishing.lvl>=Math.floor(Math.random()*15)){
           //draw fish on next tile
           tile_map[x][y].objects.push(gameObjects['fish']);
           setTimeout(() => {
             tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "fish");
           }, 1000)
-          player.incrementSkill('fishing', 1);
+          player.incrementSkill('fishing', 5);//change to be xp of fish caught
+          //next update choose random fish, regular fish  high chance, rare fish low chance (duh)
           if (player.inventory.find(obj => obj.name === 'fish')){//going to change to random fish or randomize fish in pool
             let invPos = player.inventory.findIndex(obj => obj.name ==='fish');
             player.inventory[invPos].amt += 1;
@@ -1646,13 +1643,22 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
     for (object in tile_map[x][y].objects){
       if (tile_map[x][y].objects[object].name==='tree'){
         playSound(chop);
-        if (player.skills.woodcutting.lvl>=Math.floor(Math.random()*25)){
+        if (player.skills.woodcutting.lvl >= Math.floor(Math.random()*40)){
           player.incrementSkill('woodcutting', 1);
           if (player.inventory.find(obj => obj.name === 'log')){
             invPos = player.inventory.findIndex(obj => obj.name ==='log');
             player.inventory[invPos].amt += 1;
           } else {
             player.inventory.push({'name':'log', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
+          }
+          //apple chance
+          if (Math.floor(Math.random()*100) > 50){
+            if (player.inventory.find(obj => obj.name === 'apple')){
+              invPos = player.inventory.findIndex(obj => obj.name ==='apple');
+              player.inventory[invPos].amt += 1;
+            } else {
+              player.inventory.push({'name':'apple', 'amt':1, "itemObj":{"spriteData":gameObjects['apple']}})
+            }
           }
           tile_map[x][y].objects.splice(object,1);
           tile_map[x][y].objects.push(gameObjects['stump1']);
@@ -1939,17 +1945,17 @@ var npcs=[];//npc's in game, {"[id]":npc_object}
 function Spider(){
   this.name="spider";
   this.domain = null;//generated in generator(gee ya think?)
-  this.hp = 75;
-  this.strength = 10;
+  this.hp = 50;
+  this.strength = 5;
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['spider']));
   this.spriteData.id=null;
   this.x=null;
   this.y=null;
   this.lastTime=Date.now();//timestamp
-  this.delay = 500;
+  this.delay = 1000;
   this.aggro = false;
   this.lastAggro=Date.now();
-  this.aggroRange = 10;
+  this.aggroRange = 8;
   this.reposition = false;
   this.reposCount = 0;
   
@@ -1957,7 +1963,7 @@ function Spider(){
    //check if npc dead
     if (this.hp<1){
       player.incrementSkill("strength", 2);
-      player.incrementSkill("health", 2);
+      player.incrementSkill("health", 10);
       playSound(skele_die_sound);
       game_objects.push(new Lootbag("spider", this.x, this.y, "string"));
       removeNPC(this.spriteData.id, this.x, this.y);
@@ -1990,7 +1996,7 @@ function Spider(){
           //chance to freeze player (player.freeze, add web sprite with timeout)
           //that way other mobs that freeze can have their own type of freeze
           if (Math.floor(Math.random() * 100) > 90){
-            player.freeze(3000);
+            player.freeze(1500);
             //draw web whether frozen or not just cause it's cool
             //same fashion as bobber
             tile_map[playerX][playerY].objects.push(gameObjects['web']);
@@ -2021,7 +2027,7 @@ function Spider(){
 
 function Rat(){
   this.name="rat";
-  this.hp = 50;//lel just testing
+  this.hp = 30;//lel just testing
   this.strength = 5;
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['rat']));
   this.spriteData.id=null;
@@ -2035,8 +2041,8 @@ function Rat(){
   this.strength = 2;
   this.update = function(){
     if (this.hp<1){
-      player.incrementSkill("strength", 2);
-      player.incrementSkill("health", 1);
+      player.incrementSkill("strength", 5);
+      player.incrementSkill("health", 3);
       playSound(skele_die_sound);
       removeNPC(this.spriteData.id, this.x, this.y);
     }
@@ -2106,8 +2112,8 @@ function Skeleton(){
       } else {
         game_objects.push(new Lootbag("skeleton", this.x, this.y, "coin"));
       }
-      player.incrementSkill("strength", 1);
-      player.incrementSkill("health", 1);
+      player.incrementSkill("strength", 2);
+      player.incrementSkill("health", 7);
       playSound(skele_die_sound);
       removeNPC(this.spriteData.id, this.x, this.y);
     }
@@ -2212,15 +2218,17 @@ function generateNPC(name, domain, amt, interval, xMin, xMax, yMin, yMax){
   }, interval);
 }
 
+//putting npcs in areas
+//name, location, number, frequency, xmin, ymin, xmax, ymax
 if (localStorage.getItem("tileMapSector")==="main"){
-  generateNPC("skeleton", "graveyard", 45, 1000, 78, 89, 76, 89);//down by the graveyard
-  generateNPC("spider", "dungeon", 45, 1000, 42, 68, 39, 70);//guarding dungeon entrance
-  generateNPC("rat", "village", 45, 3000, 11, 26, 57, 78);//farm village on west coast
-  generateNPC("spider", "mountaintop", 7, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest
+  generateNPC("skeleton", "graveyard", 12, 5000, 78, 89, 76, 89);//down by the graveyard
+  generateNPC("spider", "dungeon", 15, 2500, 42, 68, 39, 70);//guarding dungeon entrance
+  generateNPC("rat", "village", 12, 3000, 11, 26, 57, 78);//farm village on west coast
+  generateNPC("spider", "mountaintop", 3, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest
 } 
 else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
-  generateNPC("spider", "dungeon", 75, 2500, 11, 89, 11, 89);
-  generateNPC("rat", "cellar", 20, 2000, 31, 33, 63, 67);
+  generateNPC("spider", "dungeon", 25, 2500, 11, 89, 11, 89);
+  generateNPC("rat", "cellar", 6, 2000, 31, 33, 63, 67);
 }
 else if (localStorage.getItem("tileMapSector")==="northsea"){
   generateNPC("rat", "island1", 5, 5000, 50, 58, 20, 28);
@@ -2456,7 +2464,16 @@ setTimeout(() => {
   //end hotfixes//////////////////maybe could put these in separate hotfix.js/////////////////////////////////////
 
   //player in boat and reloaded page or sailed to different section of map
-
+  overlayCanvas = document.createElement('canvas');
+  overlayCanvas.width = canvas.width;
+  overlayCanvas.height = canvas.height;
+  overlayCanvas.style.position = 'absolute';
+  overlayCanvas.style.top = canvas.offsetTop + 'px';
+  overlayCanvas.style.left = canvas.offsetLeft + 'px';
+  overlayCanvas.style.zIndex = '1'; // Set the z-index higher than the original canvas
+  overlayCanvas.style.pointerEvents = 'none';
+  document.body.appendChild(overlayCanvas);
+  overlayCtx = overlayCanvas.getContext('2d');
   setInterval(update,100)
 },4000);//or update only when user moves or places a tile, need to add modes
 //}

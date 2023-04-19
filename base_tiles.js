@@ -92,9 +92,12 @@ baseTiles = {//redo entirely and in order
     "coin":[176,240],
     "craftingtable":[192,528],
     "scroll":[160, 1264],
+    "apple":[304,160],
     //letters here
     "F":[80,768],
-    "C":[32,768]
+    "C":[32,768],
+    "hitOutlineLeft":[112,176],
+    "hitOutlineRight":[62,176]
     //end letters
   }
 
@@ -192,6 +195,13 @@ playerObjects = {
         "sprite":baseTiles['sail'],
         "type":"object",
         "collision":false
+    },
+    "apple":{
+        "name":"apple",
+        "sprite":baseTiles['apple'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['apple']
     },
     "web":{
         "name":"web",
