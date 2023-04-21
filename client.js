@@ -1,6 +1,4 @@
 "use strict";
-//useful global variables for stuff we don't need to type over and over
-
 
 //
 let tileMapSector = localStorage.getItem("tileMapSector");
@@ -101,12 +99,6 @@ function toggleRain(){
 }
 
 function toggleStuck(){
-  //tileMapSector = "main"
-  //playerLoc back to home
-  //raftLoc back to home pier
-  //playerSailing false
-  //localStorage.setItem("tileMapSector", "main");
-  //localStorage.setItem("playerLoc", JSON.stringify([]))
   //lmao just kill the player and they respawn XD
   player.skills.health.health=-1;
 }
@@ -135,22 +127,43 @@ function toggleMap(){
   }
 }
 
+function drawIcon(name, x, y){//item name in baseTiles etc
+  ctx.drawImage(spriteSheet, baseTiles[name][0], baseTiles[name][1], 16,16,
+    x,y, 16,16);
+}
+
 function drawStats(){
   if (!showStats){
+    /*
     ctx.drawImage(spriteSheet, baseTiles['statDisp'][0], baseTiles['statDisp'][1], 16,16, 0,225, 25,25);
+    */
+   drawIcon("statDisp", 4,263);
   } else {
     ctx.fillStyle="rgba(139, 69, 19, 0.5)";
     ctx.font = '10px Arial';
     ctx.fillRect(3, 50, 125, 235);
-    ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
+    //ctx.drawImage(spriteSheet, baseTiles['redX'][0], baseTiles['redX'][1], 16,16, 0,225, 16,16);
     ctx.fillStyle="white";
+    drawIcon("heart", 4, 48);//offset 16x 12y
     ctx.fillText("health       : " + player.skills['health']['health'] + "/" + player.skills.health.max, 20,60);
+    drawIcon("speedbootsI", 4, 63);
     ctx.fillText("walking xp   : " + player.skills.walking.xp + "(" + Math.floor(player.skills.walking.lvl) + ")", 20,75);
+    drawIcon("ironsword", 4, 78);
     ctx.fillText("strength xp  : " + player.skills.strength.xp + "(" + player.skills.strength.lvl + ")", 20, 90);
-    ctx.fillText("woodcuting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 20, 105);
+    //draw double icon for wc
+    drawIcon("tree", 4, 93);
+    drawIcon("axeItem", 4, 93);
+    ctx.fillText("woodcutting xp:" + player.skills.woodcutting.xp + "(" + player.skills.woodcutting.lvl + ")", 20, 105);
+    drawIcon("tunafish", 4, 108);
+    drawIcon("fPole", 4, 108);
     ctx.fillText("fishing xp: " + player.skills.fishing.xp + "(" + player.skills.fishing.lvl + ")", 20, 120);
+    drawIcon("scroll", 4, 122);
+    drawIcon("hide", 4, 122);
     ctx.fillText("crafting xp: " + player.skills.crafting.xp + "(" + player.skills.crafting.lvl + ")", 20, 135)
+    drawIcon("mapsign", 4, 138);
     ctx.fillText("survival xp: " + player.skills.survival.xp + "(" + player.skills.survival.lvl + ")", 20, 150);
+    drawIcon("cookedtuna", 4, 153);
+    ctx.fillText("cooking xp: " + player.skills.cooking.xp + "(" + player.skills.cooking.lvl + ")", 20, 165);
   }
   //draw hp bar:
   ctx.fillStyle="rgba(255,0,0,0.5)";
@@ -162,8 +175,6 @@ function drawStats(){
     0,270, 25, 25);
 }
 
-let overlayCanvas;
-let overlayCtx;
 let offset = 0;
 let dropList = [];//for dropObj put in {"text": text, "amount": null, "coords":[[x1,y1], [x2,y2]],...}
               // drop list gen'd by another fxn. make all coords same if message to just display in place
@@ -211,11 +222,6 @@ function drawXpDrop(){//instead add to an xp queue in update. originally skill, 
       dropList[drop].coords.shift();
     }
   }
-}
-
-let msgOffset = 0;
-function overlayMessage(text){
-  
 }
 
 //interactable objects////////////////////////////////////////////////////////////////////////////////////////////////
@@ -269,9 +275,10 @@ function drawCraft(){
           overlaySprite = playerObjects[craftQueue[item].spriteData.scroll].itemSprite;
         } else {
           overlaySprite = baseTiles[craftQueue[item].spriteData.scroll];
+          console.log(overlaySprite);
         }
         ctx.drawImage(spriteSheet, overlaySprite[0], overlaySprite[1], 16, 16,
-          startPosX+6, startPosY+2, 8,8);  
+          startPosX+6, startPosY+6, 8,8);  
       } else {
         ctx.drawImage(spriteSheet, craftQueue[item].spriteData.sprite[0], craftQueue[item].spriteData.sprite[1], 16, 16,
           startPosX, startPosY, 16,16);
@@ -314,17 +321,19 @@ function craftItem(){
     console.log(`checking invPos: ${invPos}`);
     //player doesn't have item in inventory, go to next iter in outer for loop
     if (invPos===-1){//why would it be in queue if it's not in inventory...?
-      console.log(`player doesn't have ${craftQueue[rawItem].name}`)
+      //console.log(`player doesn't have ${craftQueue[rawItem].name}`)
+      popMessage(`You don't have any ${craftQueue[rawItem].name}`);
       craftQueue = [];
       return;
     }
     if (player.inventory[invPos].amt >= craftableItems[currentItem][craftQueue[rawItem].spriteData.name]){
       //player has item and enough of it, continue
-      console.log(`has enough ${player.inventory[invPos].itemObj.spriteData.name}`)
+      //console.log(`has enough ${player.inventory[invPos].itemObj.spriteData.name}`)
       continue;
     } else {
       //player has item but not enough, go to next iter in outer for loop
-      console.log(`not enough ${rawItem}`)
+      //console.log(`not enough ${rawItem}`
+      popMessage(`You don't have enough ${rawItem}`);
       craftQueue = [];
       return;
     }
@@ -344,11 +353,7 @@ function craftItem(){
   player.incrementSkill("crafting", craftingExp);
   craftQueue = [];
   addToInv(currentItem);
-  dropList.push({//remember, pushing to droplist gets drawn by drawXpDrop
-    "text":`You crafted a ${currentItem}.`,
-    "amt":null,
-    "coords":dropCoords(false)
-  });
+  popMessage(`You crafted a ${currentItem}.`);
 }
 
 let playerCrafting = false;
@@ -364,13 +369,13 @@ function craftingTable(x, y){
   //this.craftQueue = [];
   this.playerInteract = function(){
     if (playerCrafting){return;};
-    console.log("player is crafting...");
+    //console.log("player is crafting...");
     this.lastX = playerX;
     this.lastY = playerY;
     playerCrafting=true;
     this.displayInterval = setInterval(() => {
       if (playerX !== this.lastX || playerY !== this.lastY || !playerCrafting){
-        console.log("player walked away from crafting table...");
+        //console.log("player walked away from crafting table...");
         playerCrafting = false;
         craftQueue = [];
         this.lastX=null;
@@ -398,7 +403,7 @@ function Sign(x, y, message){//these *could* be reconstituted, but for now just 
     //display a message for the player
     //transparent tan, brown letters
     //disappears if player moves
-    console.log(message);
+    //console.log(message);
     signMessage = message;
     showSign = true;
     this.displayInterval = setInterval(() => {
@@ -444,15 +449,12 @@ function Raft(x, y){
   }
   this.playerInteract = function(){
     if (player.inventory.findIndex(obj => obj.name==="sail")===-1){
+      popMessage("How are you going to propel the craft?");
       return;//no sail? no sail.
     }
     let sailPos = player.inventory.findIndex(obj => obj.name==="sail");
     if (player.inventory[sailPos].amt<=0){
-      dropList.push({
-        "text":"The raft lacks a sail.",
-        "amount":null,
-        "coords":dropCoords(false)
-      });
+      popMessage("The raft lacks a sail.");
       return;
     }
     localStorage.setItem("playerSailing", JSON.stringify(true));
@@ -463,11 +465,97 @@ function Raft(x, y){
     playerY = this.y;
     //remove spriteData from tile (add back when player disembarks)
     tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);//should work 
-    dropList.push({
-      "text":"You hoist the sail and shove off from the dock.",
-      "amount":null,
-      "coords":dropCoords(false)
-    });
+    popMessage("You hoist the sailand shove off from the dock.");
+  }
+}
+
+function Lockeddoor(x, y, popupText=null){//popupText optional, otherwise popMessage("You unlock the door...");
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['door2']));
+  this.spriteData.id = generateID();
+  this.x=x;
+  this.y=y;
+  tile_map[this.x][this.y].objects.push(this.spriteData);
+  this.playerInteract = function(){
+    let keyPos = player.inventory.findIndex(obj => obj.name ==="brasskey");//change to bronze key
+    if (keyPos===-1){return;};//ya don't got no keys
+    if (player.inventory[keyPos].amt <= 0){return;};//ya got a key holder but no keys
+    if (!popupText){
+      popMessage(`You release the padlock with a brass key...`);
+    } else {
+     popMessage(popupText);//just a nice option, useful for quest?
+    }
+    player.inventory[keyPos].amt -= 1;//player uses key
+    //put a regular door in its place
+    game_objects.push(new Opendoor(this.x, this.y));
+    //door removes self
+    let object;//needs separate fxn that takes sprite ID, much neater
+    let count=0;
+    for (object in tile_map[this.x][this.y].objects){
+      if (tile_map[this.x][this.y].objects[object].id === this.spriteData.id){
+        tile_map[this.x][this.y].objects.splice(count,1);
+        break;
+      }
+      count+=1;
+    }
+    //remove from game objects (need to make this a separate fxn)
+    let game_obj;
+    let obj_count=0;
+    for (game_obj in game_objects){
+      if (game_objects[game_obj].spriteData.id===this.spriteData.id){
+
+        game_objects.splice(obj_count, 1);
+        break;
+      }
+      obj_count+=1;
+    }
+  }
+}
+
+function Opendoor(x, y, popupText=null){
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['door']));
+  this.spriteData.id = generateID();
+  game_object_ids.push(this.spriteData.id);
+  this.x=x;
+  this.y=y;
+  this.checkInterval = null;
+  this.mobBrokeTheDoorInterval = setInterval(() => {
+    //check if door not there and player not standing there
+    if (playerX!==this.x || playerY!==this.y){
+      let object;
+      for (object in tile_map[this.x][this.y].objects){
+        if (tile_map[this.x][this.y].objects[object].hasOwnProperty("id")){
+          if (tile_map[this.x][this.y].objects[object].id===this.spriteData.id){
+            return;
+          }
+        }
+      }
+      //if here put the door spriteData back
+      tile_map[this.x][this.y].objects.push(this.spriteData);
+    }
+  }, 5000);//lol
+  tile_map[this.x][this.y].objects.push(this.spriteData);
+  this.playerInteract = function(){
+    if (popupText){
+     popMessage(popupText);//just a nice option, useful for quest?
+    }
+    //override collision, remove door from tile while player is one it (setInterval), put door back
+    //remove door sprite (but not object)
+    let object;
+    let count=0;
+    for (object in tile_map[this.x][this.y].objects){
+      if (tile_map[this.x][this.y].objects[object].id === this.spriteData.id){
+        tile_map[this.x][this.y].objects.splice(count,1);
+        break;
+      }
+      count+=1;
+    }
+    this.checkInterval = setInterval(() => {
+      if (playerX !== this.x || playerY !==this.y){
+        clearInterval(this.checkInterval);
+        //put door back
+        tile_map[this.x][this.y].objects.push(this.spriteData);
+      }
+    }, 250);
   }
 }
 
@@ -482,11 +570,11 @@ function Treasurechest2(x, y, item, scroll=null, popupText=null){//popup text te
    let keyPos = player.inventory.findIndex(obj => obj.name ==="key");
    if (keyPos===-1){return;};//ya don't got no keys
    if (player.inventory[keyPos].amt <= 0){return;};//ya got a key holder but no keys
-   dropList.push({
-    "text":`You open the chest and find a ${item}`,
-    "amount":null,
-    "coords":dropCoords(false)
-   })
+   if (!popupText){
+     popMessage(`You open the chest and find a ${item}`);
+   } else {
+    popMessage(popupText);//just a nice option, useful for quest?
+   }
    player.inventory[keyPos].amt -= 1;//player uses key
    if (item in playerObjects){
        player.inventory.push({"name":item, "itemObj":new pObjList[item]})
@@ -558,7 +646,7 @@ function Treasurechest(x, y){
 
 function Lootbag(name, x, y, item){//dead spider's x,y. add this on death
   //name is from what dropped it, determines what goes in bag
-  console.log(`${name} dropped a lootbag...`)
+  //console.log(`${name} dropped a lootbag...`)
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['lootbag']));
   this.spriteData.id = generateID();
   game_object_ids.push(this.spriteData.id);//not necessary?
@@ -619,9 +707,11 @@ rain_sound.addEventListener('timeupdate', () => {
     console.log("lightning!");
     ctx.fillStyle='rgba(255, 255, 255, 0.3)';
     ctx.fillRect(0,0,canvas.width, canvas.height);
-    if (player.holding.name==='fishingpole'){
-      console.log("struck by lightning!");
-      player.skills.health.health-=15;
+    if (player.holding.name==='fishingpole' || playerSailing){
+      //console.log("struck by lightning!");
+      popMessage("You got struck by lightning!");
+      //player.skills.health.health-=15;
+      player.getAttacked(15);
     }
   }
 });
@@ -651,20 +741,22 @@ const sprtCtx = sprtCanvas.getContext('2d');
 //sprite sheet, 16px increments
 const spriteSheet = new Image();
 spriteSheet.src = 'spritesheet-0.5.18.png';
-//BLOCKSIZE=16;//maybe not need this or shorten var name
+
+//gradients for rain and being underground/in dark place
+const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
+const blackGradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
+blackGradient.addColorStop(0, "transparent");
+blackGradient.addColorStop(1, "Black");
+gradient.addColorStop(0,"transparent");
+gradient.addColorStop(1, "DarkGray");
 
 ////////////////////////////////////////////////////////////////////////NEW UI TESTING REMOVE IF SUCKS
 
 ////////////////////////////////////////////////////////////////////////END NEW UI TESTING REMOVE IF IT SUCKS
 
-//get user previous map from local storage
 var functionObjs={"mapsign":mapSign, "dungeonStairs":dungeonStairs, "chest2":Treasurechest}
-/*
-var myData = localStorage.getItem("");//originally got userMap
-if (myData!==null){
-*/
-//tile_map=JSON.parse(myData);//otherwise tile_map is just default from file
-function mapLoaded(){
+
+function mapLoaded(){//builds map, reconstituting any objects that had functions in them
   console.log("map loaded...")
   let row, col, obj;
   for (row in tile_map){
@@ -678,7 +770,6 @@ function mapLoaded(){
     }
   }
 }
-
 
 //setup dropdown menu for base tiles
 const dropdown = document.getElementById('tile-dropdown');
@@ -703,16 +794,12 @@ if (masterDebug && dropdown){
 let timerId;
 var delay = 30;
 
-document.addEventListener('keydown', (event) => {//this doesn't work right
-                                                 //maybe make it playerLastMove=Date.now() check?
-                                                 //so no matter how many times it fires it's going on time
+//let lastMove
+
+document.addEventListener('keydown', (event) => {
   if (event.target.nodeName==='SELECT') {
     return;
   }
-  if (timerId) {
-    clearTimeout(timerId);
-  }
-  timerId = setTimeout(() => {
     switch (event.key) {
       case 'c':
       case 'C':
@@ -732,24 +819,47 @@ document.addEventListener('keydown', (event) => {//this doesn't work right
         break;
       case 'ArrowUp':
       case 'w':
-        movePlayer('up');
+        movePlayer('up', true);
         break;
       case 'ArrowDown':
       case 's':
-        movePlayer('down');
+        movePlayer('down', true);
         break;
       case 'ArrowLeft':
       case 'a':
-        movePlayer('left');
+        movePlayer('left', true);
         break;
       case 'ArrowRight':
       case 'd':
-        movePlayer('right');
+        movePlayer('right', true);
         break;
       default:
         break;
     }
-  }, delay);
+
+});
+
+document.addEventListener('keyup', (event) => {
+  switch (event.key) {
+    case 'ArrowUp':
+    case 'w':
+      movePlayer('up', false);
+      break;
+    case 'ArrowDown':
+    case 's':
+      movePlayer('down', false);
+      break;
+    case 'ArrowLeft':
+    case 'a':
+      movePlayer('left', false);
+      break;
+    case 'ArrowRight':
+    case 'd':
+      movePlayer('right', false);
+      break;
+    default:
+      break;
+  }
 });
 
 //convenient buttons for mouse or mobile
@@ -787,7 +897,7 @@ function clickedStatToggle(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  return x < 25 && y < 240 && y > 225;
+  return x < 25 && y < 300 && y > 260;
 }
 
 function clickInvDown(event, uicanvas){
@@ -801,7 +911,7 @@ function clickInvUp(event, uicanvas){
   const rect = uicanvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
-  return x > 275 && y < 240 && y > 220;
+  return x > 275 && y < 235 && y > 215;
 }
 
 function clickEquip(event, uicanvas){
@@ -923,6 +1033,7 @@ if (masterDebug && document.getElementById("download-button")!==null){
 
 //extra player functions (npcs might be able to use some of these too)////////////////////////////////
 
+let cookList = {"fish":"cookedfish", "tunafish":"cookedtuna"};
 function cook(name){
   //cook or eat item, coming from useItem. works for now
   let invPos = player.inventory.findIndex(obj => obj.name ===name);
@@ -930,15 +1041,17 @@ function cook(name){
     if (nextToFire()){
       //cook it, add cooked fish to player inventory
       player.inventory[invPos].amt-=1;
-      addToInv("cookedfish");
-      console.log("cooked fish!");
+      addToInv(cookList[name]);
+      //console.log("cooked fish!");
+      popMessage(`You cook the ${name}!`);
+      player.incrementSkill("cooking", 5);
+      player.incrementSkill("survival", 5);
       }
     else {
-        //eat it or do other stuff
-        console.log("find a fire");
+        popMessage("Find a fire...");
     }
   } else {
-    console.log(`you don't have any ${name} to cook`);
+    popMessage(`You don't have any ${name} to cook.`);
   }
 }
 
@@ -957,6 +1070,16 @@ let foodInfo = {
     "time":0,
     "poison":true,
     "factor":15
+  },
+  "tunafish":{
+    "health":5,
+    "time":0,
+    "poison":true,
+    "factor":12
+  },
+  "cookedtuna":{
+    "health":10,
+    "time":0,
   }
 }
 
@@ -983,11 +1106,7 @@ function eat(name){
     } else {
       eatText = `You eat the ${name} without checking it first and you get sick!`;
     }
-    dropList.push({
-      "text":eatText,
-      "amount":null,
-      "coords":dropCoords(false)
-    })
+    popMessage(eatText);
     player.inventory[invPos].amt-=1;
     player.skills.health.health+=heals;
     if (player.skills.health.health > player.skills.health.max){
@@ -1031,6 +1150,8 @@ function useItem(name){//maybe make a separate file of player related functions?
     case "cookedfish":
     case "fish":
     case "apple":
+    case "tunafish":
+    case "cookedtuna":
     //other edible cases here
       eat(name)
       return;
@@ -1063,6 +1184,7 @@ function Player(){
   this.skills = {
     "walking":{"xp":0,"lvl":1},
     "strength":{"xp":0,"lvl":1},
+    "defense":{"xp":0, "lvl":1},
     "health":{"xp":0,"health":100,"max":100, "lvl":1},
     "playerLvl":1,
     "woodcutting":{"xp":0,"lvl":1},
@@ -1075,7 +1197,11 @@ function Player(){
   this.invPosition = 0;//first item in inventory
   this.holding={
     "name":"nothing",//empty handed this is default, would use from spriteData, but nothing has no spriteData
-    "itemObj":null,//remove item object from inventory and put it here
+    "itemObj":null//remove item object from inventory and put it here
+  };
+  this.body={//body armor
+    "name":"nothing",
+    "itemObj":null
   };
   this.update = function(){
     if (nextTo('campfire')){
@@ -1119,7 +1245,7 @@ function Player(){
         }
     }
   }
-  this.usableItems = ['fish', 'cookedfish', 'apple'];
+  this.usableItems = ['fish', 'cookedfish', 'apple', 'tunafish', 'cookedtuna'];
   //equip is really just player use
   this.equip = function(){//if item equipped, unequip it. if not equipped, equip it.
                               //if item equipped and equipping a different item, switch it.
@@ -1136,29 +1262,31 @@ function Player(){
     //equip, unequip or switch current item if itemObject.equippable!==undefined
     if (nextTo('trashcan') && itemObject!==player.holding.itemObj){//next to can and don't have it equipped? chunk it into the abyss
       player.inventory.splice(player.invPosition,1);
-      dropList.push({
-        "text":"You throw the item into the trashcan, although it is more like a black hole.",
-        "amount":null,
-        "coords":dropCoords(false)
-      });
+      popMessage("You throw the item into the trashcan.");
+      return;
     }
     if (nextTo('stump3') || nextTo('stump2')){//2 & 3 look the same, prob get rid of one lol
       if (player.inventory[player.invPosition].name==="log" && player.holding.name==="axe"){
         //split logs, add new or increment in player.inventory
         //split logs will have to be new item, possibly new sprite
-        dropList.push({
-          "text":"You split a log.",
-          "amount":null,
-          "coords":dropCoords(false)
-        });
+        popMessage("You split a log");
+        return;
       }
     }
     if (itemObject===player.holding.itemObj){
       //unequip
       player.holding={"name":"nothing", "itemObj":null};
     }
-    else if (player.holding.name==="nothing" && itemObject.equippable===true){
+    else if (itemObject.equippable===true){//player.holding.name==="nothing" && itemObject.equippable===true){
       player.holding={"name":itemObject.spriteData.name, "itemObj":itemObject};
+      return;
+    }
+    else if (itemObject.body && itemObject.body===true){
+      if (itemObject===player.body.itemObj){
+        player.body={"name":"nothing", "itemObj":null};
+      } else {
+        player.body={"name":itemObject.spriteData.name, "itemObj":itemObject};
+      }
     }
     else if (this.usableItems.includes(itemObject.spriteData.name)){
       console.log(itemObject.name);
@@ -1166,6 +1294,7 @@ function Player(){
       //fxn that checks name player holding, amt, what player is standing next to/on, sailing etc
       //    eg) holding axe, use log, standing on
       useItem(itemObject.spriteData.name);
+      return;
     }
     if (player.inventory[player.invPosition].name==="scroll"){
       let recipeText = '';
@@ -1174,11 +1303,8 @@ function Player(){
       for (ingredient in craftableItems[player.inventory[player.invPosition].itemObj.spriteData.scroll]){
         recipeText += ` ${ingredient}:${craftableItems[player.inventory[player.invPosition].itemObj.spriteData.scroll][ingredient]}`
       }
-      dropList.push({
-        "text":recipeText,
-        "amount":null,
-        "coords":dropCoords(false)
-      })
+      popMessage(recipeText);
+      return;
     }
   }//look below!
 
@@ -1201,18 +1327,19 @@ function Player(){
     localStorage.setItem("playerStats", JSON.stringify(this.skills));
     //then check if skill leveled up
   }
-  this.checkLevelUp = function (skill, hp=false){
-    let xpNeeded = Math.floor(100*Math.pow(1.25, skill.lvl));
 
+  this.checkLevelUp = function (skill, hp=false){
+    let xpNeeded = Math.floor(83 * (Math.pow(1.10408951367, skill.lvl - 1)));
+  
     if (skill.xp >= xpNeeded){
       if (!hp){
         skill.lvl++;
         skill.xp = skill.xp - xpNeeded;
       } else {
-        skill.xp=0;//skill.xp-xpNeeded;
+        skill.xp=0;
         skill.lvl++;
-        skill.health+=10;
-        skill.max+=10;
+        skill.health+=2;
+        skill.max+=2;
       }
     }
   }
@@ -1222,22 +1349,32 @@ function Player(){
     if (this.holding.name!=="nothing"){
       bonus = this.holding.itemObj.attBonus;
     }
+    //maybe other worn items have att bonus also, check slot and add to bonus accordingly
     if (playerSailing){
       this.skills.health.health-=Math.floor(Math.random()*25);
       this.incrementSkill("strength", -10);
       this.incrementSkill("survival", -10);
-      dropList.push({
-        "text":"You slip and bust your ass in the raft trying to be cute...",
-        "amount":null,
-        "coords":cropCoords(false)
-      })
+      popMessage("You slip and bust your ass in the raft trying to be cute...");
     }
     target.getAttacked(this.skills.strength.lvl + bonus);
     playSound(hit_sound);
   }
   this.getAttacked = function(damage){
-    this.gotHit = true;//checked and turned off in drawPlayer
-    this.skills.health['health']-=damage;
+    let dodge = Math.floor(Math.random()*this.skills.defense.lvl);
+    console.log("dodge:" + dodge);
+    if (player.body.name!=="nothing"){
+      dodge += Math.floor(Math.random()*player.body.itemObj.defBonus);
+    }//and any other bonuses or handicaps
+    console.log("dodge: " + dodge);
+    damage-=dodge;
+    if (damage > 0){
+      this.skills.health['health']-=damage;
+      this.gotHit = true;//checked and turned off in drawPlayer
+    } else {
+      //player dodges hit
+      popMessage("You dodge an attack!");
+    }
+    
     //localStorage['playerStats']=JSON.stringify(this.skills);
     localStorage.setItem("playerStats", JSON.stringify(this.skills));
     playSound(hit_sound);
@@ -1292,12 +1429,19 @@ if (playerStats!==null){
   if (!player.skills.survival){
     player.skills['survival']={"xp":0, "lvl":1};
   }
+  if (!player.skills.defense){
+    player.skills['defense']={"xp":0, "lvl":1};
+  }
+  if (!player.skills.cooking){
+    player.skills['cooking']={"xp":0, "lvl":1};
+  }
 }
 //get inventory from local
 var pObjList = {
   "axe":Axe,
   "fishingpole":Fishingpole,
-  "ironsword":Ironsword
+  "ironsword":Ironsword,
+  "leatherarmor":Leatherarmor
   //next here will be fishingpole
 }
 
@@ -1327,7 +1471,6 @@ if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="f
   player.inventory.push({"name":"fishingpole", "itemObj":new Fishingpole})
 }
 */
-
 
 function saveInventoryToLocal(){
   let saveList = [];
@@ -1389,11 +1532,11 @@ function interactNPC(nextX, nextY){
 }
 
 
-var itemInteractObjs = {'tree':'axe'};//need base tile interact objs too? like in case of rock///////////////////////PICKAXE NOTE
+var itemInteractObjs = {'tree':'axe', 'mushroom':'axe'};//need base tile interact objs too? like in case of rock///////////////////////PICKAXE NOTE
 function interactObject(nextX, nextY){
   let object;
   let interacted = false;
-  //WHAT IS WRONG WITH THIS PART?//////////////////////////////////////////////////////////////////////FIX IT
+  //WHAT IS WRONG WITH THIS PART?//////////////////////////////////////////////////////////////////////FIX IT'
   for (object in tile_map[nextX][nextY].objects){
     if (tile_map[nextX][nextY].objects[object].id===null || tile_map[nextX][nextY].objects[object].id==='undefined'){
       continue;
@@ -1473,53 +1616,89 @@ function surroundingTiles(x, y) {
 }
 
 //instead check players next potential tile in tile_map
-function movePlayer(direction) {
-  if (player.frozen === true){
+
+let movementInterval = null;
+
+function movePlayer(direction, keyDown) {
+  if (player.frozen === true) {
     return;
   }
-  if (Date.now()<player.lastMove+100){
+  if (keyDown) {
+    if (movementInterval === null) {
+      movementInterval = setInterval(() => {
+        if (player.lastMove+200-(player.skills.walking.lvl)>Date.now()){
+          return;
+        } else {
+          player.lastMove=Date.now();
+        }
+        let potentialX = playerX;
+        let potentialY = playerY;
+      
+        if (direction === 'up') {//check y-1
+          player.lastDirection = 'up';
+          if (playerY-1 > 9) {
+            potentialY = playerY-1;
+          }
+        }
+      
+        if (direction === 'down') {//check y+1
+          player.lastDirection = 'down';
+          if (playerY+1 < 91) {
+            potentialY = playerY+1;
+          }
+        }
+      
+        if (direction === 'left') {//check x-1
+          player.lastDirection = 'left';
+          if (playerX-1 > 9) {
+            potentialX = playerX-1;
+          }
+          ghostFacing = 'lt';
+        }
+      
+        if (direction === 'right') {//check x+1
+          player.lastDirection = 'right';
+          if (playerX+1 < 91) {
+            potentialX = playerX+1;
+          }
+          ghostFacing = 'rt';
+        }
+      
+        let collision = interactNext(potentialX, potentialY);//player interacts with objects on potential tile, returns true if collide
+        if (collision === true) {
+          return;
+        }
+      
+        if (potentialX !== playerX || potentialY !== playerY) {
+          player.incrementSkill('walking', 1);
+        }
+      
+        playerX = potentialX;
+        playerY = potentialY;
+      
+        if (!reloading) {
+          localStorage.setItem('playerLoc', JSON.stringify([playerX, playerY]));
+        }
+      }, );
+    }
+  } else {
+    clearInterval(movementInterval);
+    movementInterval = null;
     return;
-  }
-  player.lastMove=Date.now();
-  let potentialX=playerX;
-  let potentialY=playerY;
-  if (direction === 'up') {//check y-1
-    player.lastDirection = 'up';
-    if (playerY-1>9){
-      potentialY=playerY-1;
-    }
-  }
-  if (direction === 'down') {//check y+1
-    player.lastDirection = 'down';
-    if (playerY+1<91){
-      potentialY=playerY+1;
-    }
-  }
-  if (direction === 'left') {//check x-1
-    player.lastDirection = 'left';
-    if (playerX-1>9){
-      potentialX=playerX-1;
-    }
-    ghostFacing='lt';
-  }
-  if (direction === 'right') {//check x+1
-    player.lastDirection = 'right';
-    if (playerX+1<91){
-      potentialX=playerX+1;
-    }
-    ghostFacing='rt';
-  }
-  let collision=interactNext(potentialX, potentialY);//player interacts with objects on potential tile, returns true if collide
-  if (collision===true){return;};
-  if (potentialX!==playerX || potentialY!==playerY){
-    player.incrementSkill("walking", 1);
-  }
-  playerX=potentialX;
-  playerY=potentialY;
-  if (!reloading){
-    localStorage.setItem("playerLoc", JSON.stringify([playerX, playerY]));
   }
 }
+/*
+  if (player.frozen === true) {
+    return;
+  }
+*/
+  /*
+  if (Date.now() < player.lastMove + 100) {
+    return;
+  }
+
+  player.lastMove = Date.now();
+  */
 
 function drawPlayer(){
     let ghostLoc;
@@ -1552,6 +1731,10 @@ function drawPlayer(){
       ctx.drawImage(spriteSheet, player.holding.itemObj.spriteData.holdSprite[ghostFacing][0], player.holding.itemObj.spriteData.holdSprite[ghostFacing][1],
         16,16, drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
     }
+    if (player.body.name!=="nothing"){
+      ctx.drawImage(spriteSheet, player.body.itemObj.spriteData.holdSprite[ghostFacing][0], player.body.itemObj.spriteData.holdSprite[ghostFacing][1],
+        16,16, drawPointX*BLOCKSIZE-BLOCKSIZE, drawPointY*BLOCKSIZE-BLOCKSIZE, 16, 16);
+    }
     //if playerSailing, overlay sail
     if (playerSailing){
       ctx.drawImage(spriteSheet, baseTiles['sail'][0], baseTiles['sail'][1], 16,16,
@@ -1579,10 +1762,10 @@ function drawInv(){
       if (player.inventory[player.invPosition].itemObj.spriteData.scroll in playerObjects){
         overlaySprite = playerObjects[player.inventory[player.invPosition].itemObj.spriteData.scroll].itemSprite;
       } else {
-        overlaySprite = baseTiles[player.inventory[player.invPosition].itemObj.spriteData.name];
+        overlaySprite = gameObjects[player.inventory[player.invPosition].itemObj.spriteData.scroll].sprite;
       }
       ctx.drawImage(spriteSheet, overlaySprite[0], overlaySprite[1], 16, 16,
-        275+6, 240+2, 8,8);  
+        275+6, 240+4, 10,10);  
     } else {
       ctx.drawImage(spriteSheet, player.inventory[player.invPosition].itemObj.spriteData.itemSprite[0], player.inventory[player.invPosition].itemObj.spriteData.itemSprite[1], 16,16
         ,275,240, 20,20);
@@ -1598,11 +1781,28 @@ function drawInv(){
     ctx.fillText(`${itemAmt}`,275,247)
   }
   //draw arrows baseTile['upArrow'/'downArrow']
+  /*
   ctx.drawImage(spriteSheet, baseTiles['upArrow'][0], baseTiles['upArrow'][1], 16,16
     ,260,210, 50,40);
   ctx.drawImage(spriteSheet, baseTiles['downArrow'][0], baseTiles['downArrow'][1], 16,16
     ,262,250, 50,40);
+    function clickInvDown(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x > 275 && y < 280 && y > 260;
+}
 
+function clickInvUp(event, uicanvas){
+  const rect = uicanvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+  return x > 275 && y < 235 && y > 215;
+}
+  */
+
+  drawIcon("UPARROW", 275, 220);
+  drawIcon("DOWNARROW", 275, 265);
   //draw equip button, need to change function to check .equipTo (i.e. holding, wearing, footwear, etc)
   ctx.drawImage(spriteSheet, baseTiles['F'][0], baseTiles['F'][1], 16,16,
     250,245, 16,16);
@@ -1639,6 +1839,14 @@ function resetTile(){
 var regenObjects = [];//{"name":"tree", "coords":[10,10]} would get turned from stump into tree, scoured earth to rock, etc
 var looseObjects = [];
 
+let fishList = {//another thing for another file?
+  "fish":{
+    "xp":5
+  },
+  "tunafish":{
+    "xp":10
+  }
+}
 function Fishingpole(){
   this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['fishingpole']));
@@ -1658,8 +1866,8 @@ function Fishingpole(){
       return;
     }
     if (tile_map[x][y].sprite.name==='water'){
+      popMessage("You cast your line out...");
       playSound(fish_sound);
-      console.log("you cast your lure into the water...");
       //add bobber to next tile
       if (playerSailing){
         //+1 to direction so as not to go under boat
@@ -1683,26 +1891,52 @@ function Fishingpole(){
       this.bobberY=y;
       this.isFishing = setTimeout(() =>{
         tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
-        console.log("something is tugging at the line!");
-        if (player.skills.fishing.lvl>=Math.floor(Math.random()*5)){
+        //console.log("something is tugging at the line!");//change to dropList text
+        popMessage("Something is tugging at the line!");
+        if (Math.floor(Math.random()*player.skills.survival.lvl) + Math.floor(Math.random()*player.skills.fishing.lvl) < Math.floor(Math.random()*8)){
+          popMessage("Your fishing pole snapped in half!");
+          removeFirstOfItem("fishingpole");
+          player.holding={"name":"nothing", "itemObj":null};
+          return;
+        }
+        if (Math.floor(Math.random()*player.skills.fishing.lvl) >= Math.floor(Math.random()*4)){
           //draw fish on next tile
-          tile_map[x][y].objects.push(gameObjects['fish']);
+          //pick random fish, high chance for regular fish, lower chance for tuna and up
+          //then "You caught a [fish]!"  in dropList 
+          let caughtFish = weightedRandomSelection(fishList, player.skills.fishing.lvl);
+          popMessage(`You caught a ${caughtFish}!`);
+          tile_map[x][y].objects.push(gameObjects[caughtFish]);
           setTimeout(() => {
-            tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "fish");
+            tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", caughtFish);
           }, 1000)
-          player.incrementSkill('fishing', 5);//change to be xp of fish caught
+          player.incrementSkill('fishing', fishList[caughtFish].xp);//change to be xp of fish caught
           //next update choose random fish, regular fish  high chance, rare fish low chance (duh)
-          if (player.inventory.find(obj => obj.name === 'fish')){//going to change to random fish or randomize fish in pool
-            let invPos = player.inventory.findIndex(obj => obj.name ==='fish');
+          if (player.inventory.find(obj => obj.name === caughtFish)){//going to change to random fish or randomize fish in pool
+            let invPos = player.inventory.findIndex(obj => obj.name ===caughtFish);
             player.inventory[invPos].amt += 1;
           } else {
-            player.inventory.push({'name':'fish', 'amt':1, "itemObj":{"spriteData":gameObjects['fish']}})
+            player.inventory.push({'name':caughtFish, 'amt':1, "itemObj":{"spriteData":gameObjects[caughtFish]}})
           }
         } else {
-          console.log("it got away...");
+          //console.log("it got away...");  dropList text]
+          popMessage("It got away...");
         }
       }, 5000);
     }
+  }
+}
+
+function Leatherarmor(){
+  this.equippable=false;
+  this.body=true;
+  this.spriteData = JSON.parse(JSON.stringify(playerObjects['leatherarmor']));
+  this.spriteData.id = generateID();
+  this.attBonus=0;
+  this.defBonus=4;
+  this.isHeld=false;
+  this.onGround=false;
+  this.action = function(x, y){
+    //again don't need but might need for later
   }
 }
 
@@ -1719,6 +1953,11 @@ function Ironsword(){
   }
 }
 
+let treesChopped = 0;//testing
+let whacksPerTree = 0;
+let whackValues = [];//append whacksPerTree here. whack rate is total of whackValues divided by whackValues.length (or treesChopped)
+let whackRate = null;
+let lastWhack = Date.now();
 function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
   this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['axe']));
@@ -1728,18 +1967,41 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
   this.onGround = false;
   //this.action = axeAction;
   this.action = function(x, y){//, object_name){//for chopping trees, attack is just a bonus to melee. could add attack type?
+    
+    if (lastWhack+500>Date.now()){
+      return;
+    }
+    
+    else {
+      lastWhack=Date.now()//need to absolutely make sure this separate instance of changing player.lastMove won't fuck anything up
+    }
+  
     let object;
     let invPos;
     for (object in tile_map[x][y].objects){
-      if (tile_map[x][y].objects[object].name==='tree'){
+      if (tile_map[x][y].objects[object].name==='tree'){//it already checked for this no?
         playSound(chop);
-        if (player.skills.woodcutting.lvl >= Math.floor(Math.random()*40)){
+        whacksPerTree+=1;
+        if (Math.floor(Math.random()*player.skills.woodcutting.lvl) >= Math.floor(Math.random()*20)){//then this would be for whatever item player chopping, but still only apple chance on trees
+          treesChopped+=1;
+          whackValues.push(whacksPerTree);
+          let value;
+          let total = 0;
+          for (value in whackValues){
+            total+=whackValues[value];
+          }
+          whackRate=Math.floor(total/treesChopped);//(or whackValues.length)
+          console.log(`Trees chopped: ${treesChopped}`);
+          console.log(`Hwhacks per last tree: ${whacksPerTree}`);
+          console.log(`Hwhack Rate: ${whackRate}`);
+          whacksPerTree=0;
           player.incrementSkill('woodcutting', 1);
           if (player.inventory.find(obj => obj.name === 'log')){
             invPos = player.inventory.findIndex(obj => obj.name ==='log');
             player.inventory[invPos].amt += 1;
           } else {
-            player.inventory.push({'name':'log', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
+            //player.inventory.push({'name':'log', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
+            addToInv("tree");
           }
           //apple chance
           if (Math.floor(Math.random()*100) > 50){
@@ -1861,11 +2123,7 @@ function checkCollision(nextX, nextY, npc=false){
       //need fxn removeFirstOfItem(name);
       if (Math.floor(Math.random()*player.skills.survival.lvl) < Math.floor(Math.random()*30)){
         //sail breaks, remove one from player inventory
-        dropList.push({
-          "text":"You clipped the pier and broke your sail!",
-          "amount":null,
-          "coords":dropCoords(false)
-        });
+        popMessage("You clipped the pier and broke your sail!");
         removeFirstOfItem("sail");
       }
       return false;
@@ -1975,6 +2233,48 @@ function removeFirstOfItem(name){
   
 }
 
+function weightedRandomSelection(itemList, playerLevel) {
+  if (!itemList || Object.keys(itemList).length === 0) {
+    throw new Error('Item list is empty or undefined.');
+  }
+
+  // Extract the keys from the object
+  const keys = Object.keys(itemList);
+
+  // Create an array to store the weights of each item
+  const weights = [];
+
+  // Calculate the weight of each item based on its position in the list and the player's level
+  for (let i = 0; i < keys.length; i++) {
+    const rarityFactor = Math.max(1, i - playerLevel + 1);
+    const weight = Math.pow(0.6, i) * rarityFactor;
+    weights.push(weight);
+  }
+
+  // Calculate total weight
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+  // Generate a random number between 0 and totalWeight
+  const random = Math.random() * totalWeight;
+
+  // Select an item based on its weighted probability
+  let weightSum = 0;
+  for (let i = 0; i < keys.length; i++) {
+    weightSum += weights[i];
+    if (random < weightSum) {
+      return keys[i];
+    }
+  }
+}
+
+function popMessage(message){
+  dropList.push({
+    "text":message,
+    "amount":null,
+    "coords":dropCoords(false)
+  });
+}
+
 //if you're wondering why the fuck all these are here, I am too XD
 //end utility functions///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2068,14 +2368,21 @@ function Spider(){
   this.aggroRange = 8;
   this.reposition = false;
   this.reposCount = 0;
+  //this.drops = ["string", "brasskey"]
   
   this.update = function(){
    //check if npc dead
     if (this.hp<1){
       player.incrementSkill("strength", 2);
       player.incrementSkill("health", 10);
+      let loot;
       playSound(skele_die_sound);
-      game_objects.push(new Lootbag("spider", this.x, this.y, "string"));
+      if (Math.floor(Math.random()*100 > 95)){
+        loot = "brasskey";
+      } else {
+        loot = "string"
+      }
+      game_objects.push(new Lootbag("spider", this.x, this.y, loot));
       removeNPC(this.spriteData.id, this.x, this.y);
     }
     let now = Date.now();
@@ -2280,11 +2587,6 @@ function generateID(){//this is not best practice, just for testing. max of 1000
 var game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
 
 const generatorList = {"spider":Spider, "rat":Rat, "skeleton":Skeleton}
-/*
-const domainList = {
-  "map_2_graveyard"://
-}
-*/
 function getValidSpawnCoord(minX, minY, maxX, maxY){//useful ass function!
   let validCoords = [];
   for (let x = minX; x < maxX; x++){
@@ -2395,12 +2697,15 @@ function drawWeather(x,y){
   }
 }
 
+/*
+
 const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
 const blackGradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width/1.5);
 blackGradient.addColorStop(0, "transparent");
 blackGradient.addColorStop(1, "Black");
 gradient.addColorStop(0,"transparent");
 gradient.addColorStop(1, "DarkGray");
+*/
 
 function drawBigMap(){
   //draw all tiles except 1/16 size? will have to see how it works out
@@ -2484,6 +2789,7 @@ function drawMap(disp_area){
     ctx.fillStyle = gradient;
     ctx.fillRect(0,0, canvas.width, canvas.height);
   }
+  
   if (tileMapSector==="dungeon_1"){//change to in list of dark places
     ctx.fillStyle = blackGradient;
     ctx.fillRect(0,0, canvas.width, canvas.height);
@@ -2514,6 +2820,7 @@ function update(){
       let disp_area=drawBigMap();
       drawMap(disp_area);
     }
+    //drawRainFade();
     drawStats();
     drawInv();//testing until better inv UI
     drawSign();
@@ -2550,8 +2857,23 @@ setTimeout(() => {
     game_objects.push(playerRaft);
     game_objects.push(new craftingTable(50, 80));
     game_objects.push(new Treasurechest2(50, 82, "scroll", "fishingpole"));
+    //archie village mods
     tile_map[34][56].objects.push(gameObjects['trashcan']);
     game_objects.push(new Sign(34, 57, "                        WARNING                            Stand next to the trashcan and try to use an item and it will be thrown away forever! Throw your duplicate/deprecated items in here or when you want to start from scratch. Even if you delete your axe, you always start with a new one"));
+    tile_map[32][62].objects=[gameObjects['stoneplate']];
+    game_objects.push(new Lockeddoor(32,62, "Opened the cellar door with a brass key."));
+    game_objects.push(new Opendoor(28,59));
+    game_objects.push(new Opendoor(28,60));
+    game_objects.push(new Opendoor(20,61));
+    game_objects.push(new Opendoor(16,61));
+    game_objects.push(new Opendoor(20,65));
+    //Miias house
+    game_objects.push(new Opendoor(49,79));
+    //chapel
+    game_objects.push(new Opendoor(68,81));
+    //Mongershouse
+    game_objects.push(new Opendoor(48,32))
+    game_objects.push(new Opendoor(22,20));
   } 
   else if (localStorage.getItem("tileMapSector")==="northsea"){
     let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
@@ -2572,7 +2894,6 @@ setTimeout(() => {
   }
 
   //end hotfixes//////////////////maybe could put these in separate hotfix.js/////////////////////////////////////
-
   //player in boat and reloaded page or sailed to different section of map  ///<<<why is that there?! what used to be here?!
   setInterval(update,100)
 },4000);

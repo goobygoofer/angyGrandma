@@ -100,6 +100,19 @@ baseTiles = {//redo entirely and in order
     "hitOutlineLeft":[112,176],
     "hitOutlineRight":[62,176],
     "hide":[224,272],
+    "tunafish":[240,480],
+    "cookedtuna":[64,496],
+    "leatherArmorL":[159,272],
+    "leatherArmorR":[209,272],
+    "leatherArmorI":[288,224],
+    "brasskey":[176,1264],
+    "heart":[144,528],
+    "speedbootsI":[144,448],
+    "speedbootsR":[160,448],//might have to switch/tweak R/L or offset
+    "speedbootsL":[160,432],
+    "UPARROW":[208,1264],
+    "DOWNARROW":[192,1264]
+
     //end letters
   }
 
@@ -135,6 +148,12 @@ playerObjects = {
         "id":null,
         "holdSprite":{"lt":baseTiles['ironswordL'], "rt":baseTiles['ironswordR']},
         "itemSprite":baseTiles['ironsword']
+    },
+    "leatherarmor":{
+        "name":"leatherarmor",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['leatherArmorL'], "rt":baseTiles['leatherArmorR']},//hold? lol
+        "itemSprite":baseTiles['leatherArmorI']
     }
 }
   gameObjects = {
@@ -219,6 +238,13 @@ playerObjects = {
         "collision":false,
         "itemSprite":baseTiles['hide']  
     },
+    "brasskey":{
+        "name":"brasskey",
+        "sprite":baseTiles['brasskey'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['brasskey']
+    },
     "key":{
         "name":"key",
         "sprite":baseTiles['key'],
@@ -260,6 +286,20 @@ playerObjects = {
         "type":"object",
         "collision":false,
         "itemSprite":baseTiles['cookedfish']
+    },
+    "tunafish":{
+        "name":"tunafish",
+        "sprite":baseTiles['tunafish'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['tunafish']
+    },
+    "cookedtuna":{
+        "name":"cookedtuna",
+        "sprite":baseTiles['cookedtuna'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['cookedtuna']
     },
     "abyss":{
         "name":"abyss",
