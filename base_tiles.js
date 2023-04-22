@@ -111,8 +111,7 @@ baseTiles = {//redo entirely and in order
     "speedbootsR":[160,448],//might have to switch/tweak R/L or offset
     "speedbootsL":[160,432],
     "UPARROW":[208,1264],
-    "DOWNARROW":[192,1264]
-
+    "DOWNARROW":[192,1264],
     //end letters
   }
 
@@ -124,7 +123,8 @@ baseTiles = {//redo entirely and in order
     "ratR":[112,144],
     "ratL":[192,128],
     "spiderR":[96,240],
-    "spiderL":[112, 240]
+    "spiderL":[112, 240],
+    "shopkeepR":[16,128]//no shopkeepL yet
   }
 
 playerObjects = {
@@ -174,6 +174,15 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "shopkeep":{
+        "name":"shopkeep",
+        "id":null,
+        "sprite":npcTiles['shopkeepR'],//{"left":npcTiles['shopkeepR'],"right":npcTiles['shopkeepR']},//remember no left facing for this char yet
+        //"facing":"right",
+        "type":"object",//another confusing one I know
+        "collision":true,
+        "attackable":false
     },
     "skeleton":{//character.sprite is now both sets of coords for left and right facing
         "name":"skeleton",//so player/npc sprites get drawn differently
