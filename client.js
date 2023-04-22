@@ -296,7 +296,8 @@ function drawCraft(){
 //
 let craftableItems = {//test this in separate file cause it could get long
   "fishingpole":{"log":1, "string":1},
-  "sail":{"log":4, "string":4, "hide":2}
+  "sail":{"log":4, "string":4, "hide":2},
+  "leatherarmor":{"hide":6, "string":6}
 };//
 
 function craftItem(){
@@ -388,7 +389,7 @@ function craftingTable(x, y){
 
 let signMessage = '';
 let showSign = false;
-function Sign(x, y, message){//these *could* be reconstituted, but for now just hardcode the in cause maps pita
+function Sign(x, y, message){//these *could* be reconstituted, but for now just hardcode them in cause maps pita
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['sign']));
   this.spriteData.id = generateID();
   this.displayInterval = null;
@@ -403,7 +404,6 @@ function Sign(x, y, message){//these *could* be reconstituted, but for now just 
     //display a message for the player
     //transparent tan, brown letters
     //disappears if player moves
-    //console.log(message);
     signMessage = message;
     showSign = true;
     this.displayInterval = setInterval(() => {
@@ -549,16 +549,20 @@ function Opendoor(x, y, popupText=null){
       }
       count+=1;
     }
-    this.checkInterval = setInterval(() => {
-      if (playerX !== this.x || playerY !==this.y){
-        clearInterval(this.checkInterval);
-        //put door back
-        tile_map[this.x][this.y].objects.push(this.spriteData);
-      }
-    }, 250);
+    if (!this.checkInterval){
+      this.checkInterval = setInterval(() => {
+        if (playerX !== this.x || playerY !==this.y){
+          clearInterval(this.checkInterval);
+          this.checkInterval=null;
+          //put door back
+          tile_map[this.x][this.y].objects.push(this.spriteData);
+        }
+      }, 250);
+    }
   }
 }
 
+//Treasurechest2 used for giving player scrolls (for now)
 function Treasurechest2(x, y, item, scroll=null, popupText=null){//popup text tells what player got
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['chest2']));
   this.spriteData.id = generateID();
@@ -646,7 +650,6 @@ function Treasurechest(x, y){
 
 function Lootbag(name, x, y, item){//dead spider's x,y. add this on death
   //name is from what dropped it, determines what goes in bag
-  //console.log(`${name} dropped a lootbag...`)
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['lootbag']));
   this.spriteData.id = generateID();
   game_object_ids.push(this.spriteData.id);//not necessary?
@@ -708,9 +711,7 @@ rain_sound.addEventListener('timeupdate', () => {
     ctx.fillStyle='rgba(255, 255, 255, 0.3)';
     ctx.fillRect(0,0,canvas.width, canvas.height);
     if (player.holding.name==='fishingpole' || playerSailing){
-      //console.log("struck by lightning!");
       popMessage("You got struck by lightning!");
-      //player.skills.health.health-=15;
       player.getAttacked(15);
     }
   }
@@ -754,7 +755,7 @@ gradient.addColorStop(1, "DarkGray");
 
 ////////////////////////////////////////////////////////////////////////END NEW UI TESTING REMOVE IF IT SUCKS
 
-var functionObjs={"mapsign":mapSign, "dungeonStairs":dungeonStairs, "chest2":Treasurechest}
+var functionObjs={"mapsign":mapSign, "dungeonStairs":dungeonStairs, "chest2":Treasurechest};
 
 function mapLoaded(){//builds map, reconstituting any objects that had functions in them
   console.log("map loaded...")
@@ -862,11 +863,7 @@ document.addEventListener('keyup', (event) => {
   }
 });
 
-//convenient buttons for mouse or mobile
-document.getElementById('upButton').addEventListener('click', () => movePlayer('up'));
-document.getElementById('leftButton').addEventListener('click', () => movePlayer('left'));
-document.getElementById('downButton').addEventListener('click', () => movePlayer('down'));
-document.getElementById('rightButton').addEventListener('click', () => movePlayer('right'));
+
 if (masterDebug && document.getElementById("placeButton")!==null && document.getElementById("resetButton")!==null && document.getElementById("saveButton")!==null && document.getElementById("resetTileButton")!==null && document.getElementById("collisionButton")!==null){
   document.getElementById('placeButton').addEventListener('click', () => placeTile(objectToPlace));
   document.getElementById('resetButton').addEventListener('click', () => clearUserMap());
@@ -989,6 +986,7 @@ canvas.addEventListener('touchend', event => {
   }
 });
 
+
 if (masterDebug && document.getElementById("file-input")!==null){
   const fileInput = document.getElementById('file-input');
   fileInput.addEventListener('change', (event) => {
@@ -1037,6 +1035,8 @@ let cookList = {"fish":"cookedfish", "tunafish":"cookedtuna"};
 function cook(name){
   //cook or eat item, coming from useItem. works for now
   let invPos = player.inventory.findIndex(obj => obj.name ===name);
+  if (!cookList.hasOwnProperty(player.inventory[invPos].name)){return;};
+  console.log(player.inventory[invPos].name);
   if (player.inventory[invPos].amt > 0){
     if (nextToFire()){
       //cook it, add cooked fish to player inventory
@@ -1095,7 +1095,7 @@ function eat(name){
       let poisonFactor = Math.floor(Math.random()*foodInfo[name].factor)*-1;
       heals = survivalFactor + poisonFactor;//works for now
       if (heals < 0){
-        player.incrementSkill("survival", 25);
+        player.incrementSkill("survival", 5);
       }
     } else{
       heals = foodInfo[name].health;
@@ -1105,6 +1105,7 @@ function eat(name){
       eatText = `You eat the ${name} and you feel invigorated.`;
     } else {
       eatText = `You eat the ${name} without checking it first and you get sick!`;
+
     }
     popMessage(eatText);
     player.inventory[invPos].amt-=1;
@@ -1353,7 +1354,7 @@ function Player(){
     if (playerSailing){
       this.skills.health.health-=Math.floor(Math.random()*25);
       this.incrementSkill("strength", -10);
-      this.incrementSkill("survival", -10);
+      this.incrementSkill("survival", +5);
       popMessage("You slip and bust your ass in the raft trying to be cute...");
     }
     target.getAttacked(this.skills.strength.lvl + bonus);
@@ -2352,6 +2353,59 @@ function isOneUnitAway(x1, y1, x2, y2){
 }
 
 var npcs=[];//npc's in game, {"[id]":npc_object}
+//FIRST NPC/////////////////////////////////////////////////////////////////////////////////////////////////////////FIRST NPC///
+//needs an outside function that displays items amt/prices and lets player click item to buy
+                                                             //-coins, addToInv(item)
+//quest events. playerInteract changes depending on events
+  //talk to npc to unlock quest, new Quest with parameters
+  //upon quest completion npc greeting changes
+  //in case of Klin shopkeep, unlocks trade and player given reward
+function Shopkeep(x, y, name, greeting, selling={}){//maybe these kind of npcs don't go in npcs list?
+                                        //{"item":{"amt":5, "price":5}}
+  this.spriteData = JSON.parse(JSON.stringify(gameObjects['shopkeep']));
+  this.spriteData.id=generateID();
+  this.x=x;
+  this.y=y;
+  this.selling=selling;//is this actually necessary
+  tile_map[this.x][this.y].objects.push(this.spriteData);
+  this.playerInteract = function(){
+    //npc greet
+    //open shop popup
+    //change to have to do quest first in case of Klin npc
+    popMessage(greeting);
+    shopPopup("Click an item to buy", this.selling);
+  }
+}
+
+
+/*
+    signMessage = message;
+    showSign = true;
+    this.displayInterval = setInterval(() => {
+      if (playerX !== this.lastX || playerY !== this.lastY){
+        showSign=false;
+        signMessage = '';
+        this.lastX=null;
+        this.lastY=null;
+        clearInterval(this.displayInterval);
+      }
+    }, 100);
+*/
+let showShop = false;
+function shopPopup(text, items){//text either manual or comes from Shopkeep properties
+  //Sign-like popup displays item icons and their amt/prices
+  //player clicks to buy, subtract coins, add item
+  //detects if player has walked away
+  //display text at top of popup
+  //items is {"item1":{"amt":5, "price":5}, "item2":{"amt":4, "price":12},...}
+  //for item in items, display item
+  if (!showShop){
+    showShop=true;
+  } else {
+    showShop=false;
+  }
+}
+
 function Spider(){
   this.name="spider";
   this.domain = null;//generated in generator(gee ya think?)
@@ -2630,29 +2684,17 @@ function generateNPC(name, domain, amt, interval, xMin, xMax, yMin, yMax){
     }
   }, interval);
 }
-
-//putting npcs in areas
-//name, location, number, frequency, xmin, ymin, xmax, ymax
-if (localStorage.getItem("tileMapSector")==="main"){
-  generateNPC("skeleton", "graveyard", 12, 5000, 78, 89, 76, 89);//down by the graveyard
-  generateNPC("spider", "dungeon", 15, 2500, 42, 68, 39, 70);//guarding dungeon entrance
-  generateNPC("rat", "village", 12, 3000, 11, 26, 57, 78);//farm village on west coast
-  generateNPC("spider", "mountaintop", 3, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest
-} 
-else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
-  generateNPC("spider", "dungeon", 25, 2500, 11, 89, 11, 89);
-  generateNPC("rat", "cellar", 6, 2000, 31, 33, 63, 67);
-}
-else if (localStorage.getItem("tileMapSector")==="northsea"){
-  generateNPC("rat", "island1", 5, 5000, 50, 58, 20, 28);
-  generateNPC("skeleton", "island2", 5, 5000, 21, 29, 58, 64);
-}
-
 //uncomment for npc spawning
 //end npc testing/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 //main///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+function drawShop(){
+  if (showShop){
+
+  }
+}
+
 function drawSign(){
   //signMessage
   //showSign
@@ -2831,7 +2873,7 @@ function update(){
   }
 }
 
-//function mapLoaded(){
+
 setTimeout(() => {
   //signs around map to help player////////////////////////////////////////////////////////////////////////////////
   //put signs here cause issues with tile_map loading
@@ -2885,6 +2927,11 @@ setTimeout(() => {
     //tile_map[50][50].objects.push(gameObjects['pathVERT']);
     tile_map[42][12].objects.push(gameObjects['rockpile']);
     game_objects.push(new Sign(42, 11, "North to mainland"));
+    //Klinthios's island hut
+    game_objects.push(new Opendoor(50,35, "This door is weathered by wind and saltwater..."));
+    game_objects.push(new Opendoor(51,39,"The door opens, wafting fish smell everywhere..."))
+    game_objects.push(new Treasurechest2(25, 59, "scroll", "leatherarmor"));
+    game_objects.push(new Shopkeep(50,37, "Klinthios", "Klinthios: Oh dear, can you kill all those nasty rats please?!"));//need better way to build npcs like this
   }
   //end signs//////////////////////////////////////////////////////////////////////////////////////////////////////
   
@@ -2893,7 +2940,22 @@ setTimeout(() => {
     tile_map[47][36].sprite = gameObjects['water'];//just test, it works
   }
 
+  //putting npcs in areas
+  //name, location, number, frequency, xmin, ymin, xmax, ymax
+  if (localStorage.getItem("tileMapSector")==="main"){
+    generateNPC("skeleton", "graveyard", 12, 5000, 78, 89, 76, 89);//down by the graveyard
+    generateNPC("spider", "dungeon", 15, 2500, 42, 68, 39, 70);//guarding dungeon entrance
+    generateNPC("rat", "village", 12, 3000, 11, 26, 57, 78);//farm village on west coast
+    generateNPC("spider", "mountaintop", 3, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest
+  } 
+  else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
+    generateNPC("spider", "dungeon", 25, 2500, 11, 89, 11, 89);
+    generateNPC("rat", "cellar", 6, 2000, 31, 33, 63, 67);
+  }
+  else if (localStorage.getItem("tileMapSector")==="northsea"){
+    generateNPC("rat", "island1", 5, 5000, 50, 58, 20, 28);
+    generateNPC("skeleton", "island2", 5, 5000, 21, 29, 58, 64);
+  }
   //end hotfixes//////////////////maybe could put these in separate hotfix.js/////////////////////////////////////
-  //player in boat and reloaded page or sailed to different section of map  ///<<<why is that there?! what used to be here?!
   setInterval(update,100)
 },4000);
