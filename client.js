@@ -2002,7 +2002,7 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
             player.inventory[invPos].amt += 1;
           } else {
             //player.inventory.push({'name':'log', 'amt':1, "itemObj":{"spriteData":gameObjects['log']}})
-            addToInv("tree");
+            addToInv("log");
           }
           //apple chance
           if (Math.floor(Math.random()*100) > 50){
