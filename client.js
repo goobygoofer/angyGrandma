@@ -5,7 +5,7 @@ let tileMapSector = localStorage.getItem("tileMapSector");
 switch (tileMapSector){
   case "main":
     const script1 = document.createElement("script");
-    script1.src="./map_2.js";
+    script1.src="./main.js";
     script1.type="text/javascript";
     script1.onload = mapLoaded;
     document.body.appendChild(script1);
@@ -40,7 +40,7 @@ switch (tileMapSector){
     break;
   default:
     const scriptD = document.createElement("script");
-    scriptD.src="./map_2.js";
+    scriptD.src="./main.js";
     scriptD.type="text/javascript";
     scriptD.onload = mapLoaded;
     document.body.appendChild(scriptD);
