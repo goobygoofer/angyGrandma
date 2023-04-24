@@ -67,6 +67,7 @@ baseTiles = {//redo entirely and in order
     "axeItem":[64,64],
     "statDisp":[80, 624],
     "log":[96, 0],
+    "splitlog":[96,1120],
     "upArrow":[80,975],
     "downArrow":[96, 975],
     "hpIcon":[160,832],
@@ -82,6 +83,7 @@ baseTiles = {//redo entirely and in order
     "abyss":[160,384],
     "dungeonStairs":[0,352],
     "fish":[256, 480],
+    "portalfish":[224,480],
     "cookedfish":[272, 480],
     "bobber":[304,480],
     "chest2":[240,816],
@@ -97,6 +99,7 @@ baseTiles = {//redo entirely and in order
     //letters here
     "F":[80,768],
     "C":[32,768],
+    //end letters
     "hitOutlineLeft":[112,176],
     "hitOutlineRight":[62,176],
     "hide":[224,272],
@@ -112,7 +115,20 @@ baseTiles = {//redo entirely and in order
     "speedbootsL":[160,432],
     "UPARROW":[208,1264],
     "DOWNARROW":[192,1264],
-    //end letters
+    "palmtree":[224,1264],
+    "longbow":[32,240],
+    "longbowL":[144,240],
+    "longbowR":[128,240],
+    "knife":[288,432],
+    "knifeL":[304,464],
+    "knifeR":[304,432],
+    //projectiles -- all these have up down left right, bit bulky but makes easier in Projectile fxn
+    "arrowup":[208,240],
+    "arrowdown":[224,240],
+    "arrowleft":[240,240],
+    "arrowright":[256,240],
+    "arrow":[48,1216],
+    "pebble":[208,576]
   }
 
   npcTiles = {
@@ -124,7 +140,9 @@ baseTiles = {//redo entirely and in order
     "ratL":[192,128],
     "spiderR":[96,240],
     "spiderL":[112, 240],
-    "shopkeepR":[16,128]//no shopkeepL yet
+    "shopkeepR":[16,128],//no shopkeepL yet
+    "gnollR":[224,576],
+    "gnollL":[240,576]
   }
 
 playerObjects = {
@@ -154,9 +172,30 @@ playerObjects = {
         "id":null,
         "holdSprite":{"lt":baseTiles['leatherArmorL'], "rt":baseTiles['leatherArmorR']},//hold? lol
         "itemSprite":baseTiles['leatherArmorI']
+    },
+    "longbow":{
+        "name":"longbow",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['longbowL'], "rt":baseTiles['longbowR']},
+        "itemSprite":baseTiles['longbow']
+    },
+    "knife":{
+        "name":"knife",
+        "id":null,
+        "holdSprite":{"lt":baseTiles['knifeL'], "rt":baseTiles['knifeR']},
+        "itemSprite":baseTiles['knife']
     }
 }
   gameObjects = {
+    "gnoll":{
+        "name":"gnoll",
+        "id":null,
+        "sprite":{"left":npcTiles['gnollL'],"right":npcTiles['gnollR']},
+        "facing":"right",
+        "type":"npc",
+        "collision":true,
+        "attackable":true
+    },
     "spider":{
         "name":"spider",
         "id":null,
@@ -193,6 +232,47 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "pebble":{
+        "name":"pebble",
+        "sprite":baseTiles['pebble'],
+        "collision":false,
+        "itemSprite":baseTiles['pebble']
+    },
+    "arrow":{
+        "name":"arrow",
+        "sprite":baseTiles['arrow'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['arrow']
+    },
+    "arrowup":{
+        "name":"arrowup",
+        "sprite":baseTiles['arrowup'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['arrowup']
+    },
+    "arrowdown":{
+        "name":"arrowdown",
+        "sprite":baseTiles['arrowdown'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['arrowdown']
+    },
+    "arrowleft":{
+        "name":"arrowleft",
+        "sprite":baseTiles['arrowleft'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['arrowleft']
+    },
+    "arrowright":{
+        "name":"arrowright",
+        "sprite":baseTiles['arrowright'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['arrowright']
     },
     "scroll":{
         "name":"scroll",
@@ -310,6 +390,13 @@ playerObjects = {
         "collision":false,
         "itemSprite":baseTiles['cookedtuna']
     },
+    "portalfish":{
+        "name":"portalfish",
+        "sprite":baseTiles['portalfish'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['portalfish']
+    },
     "abyss":{
         "name":"abyss",
         "sprite":baseTiles["abyss"],
@@ -338,6 +425,13 @@ playerObjects = {
         "type":"object",
         "collision":false,
         "itemSprite":baseTiles["log"]//redundant but will work? for inventory drawing ease
+    },
+    "splitlog":{
+        "name":"splitlog",
+        "sprite":baseTiles['splitlog'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['splitlog']
     },
     "cloud":{
         "name":"cloud",
@@ -600,6 +694,12 @@ playerObjects = {
         "sprite":baseTiles['tree'],//need to account for a chopped up tree (same obj, change sprite?)
         "type":"object",//as opposed to object or player
         "collision":true,
+    },
+    "palmtree":{
+        "name":"palmtree",
+        "sprite":baseTiles['palmtree'],
+        "type":"object",
+        "collision":true
     },
     "water":{
         "name":"water",

@@ -24,6 +24,20 @@ switch (tileMapSector){
     script3.onload = mapLoaded;
     document.body.appendChild(script3);
     break;
+  case "deepnorthsea":
+    const script5 = document.createElement("script");
+    script5.src="./deepnorthsea.js";
+    script5.type="text/javascript";
+    script5.onload = mapLoaded;
+    document.body.appendChild(script5);
+    break;
+  case "createmap":
+    const script4 = document.createElement("script");
+    script4.src="./empty_map.js";
+    script4.type="text/javascript";
+    script4.onload = mapLoaded;
+    document.body.appendChild(script4);
+    break;
   default:
     const scriptD = document.createElement("script");
     scriptD.src="./map_2.js";
@@ -35,7 +49,7 @@ switch (tileMapSector){
 }
 //debug stuffss
 
-let masterDebug = false;
+let masterDebug = true;
 function debugMode(){
   if (masterDebug === false){
     masterDebug=true;
@@ -164,6 +178,8 @@ function drawStats(){
     ctx.fillText("survival xp: " + player.skills.survival.xp + "(" + player.skills.survival.lvl + ")", 20, 150);
     drawIcon("cookedtuna", 4, 153);
     ctx.fillText("cooking xp: " + player.skills.cooking.xp + "(" + player.skills.cooking.lvl + ")", 20, 165);
+    drawIcon("longbow", 4, 168);
+    ctx.fillText("archery xp: " + player.skills.archery.xp + "(" + player.skills.archery.lvl + ")", 20, 180);
   }
   //draw hp bar:
   ctx.fillStyle="rgba(255,0,0,0.5)";
@@ -297,10 +313,12 @@ function drawCraft(){
 let craftableItems = {//test this in separate file cause it could get long
   "fishingpole":{"log":1, "string":1},
   "sail":{"log":4, "string":4, "hide":2},
-  "leatherarmor":{"hide":6, "string":6}
+  "leatherarmor":{"hide":6, "string":6},
+  "longbow":{"splitlog":4, "hide":1, "string":4}
 };//
 
 function craftItem(){
+  if (craftQueue.length<=1){return};
   let currentItem = null;//scroll here
   //defaults on first scroll in queue
   let scroll;
@@ -314,8 +332,11 @@ function craftItem(){
   if (currentItem === null){
     return;//didn't have any crafting scrolls in there
   }
+  
+  let itemCheck=Object.keys(craftableItems[currentItem]).length;
   let rawItem;
   for (rawItem in craftQueue){
+    if (!Object.keys(craftableItems[currentItem]).includes(craftQueue[rawItem].spriteData.name)){continue};
     if (rawItem===scrollPos){continue;};//no need to check scroll and duh it exists cause you put it there
     if (craftQueue[rawItem].spriteData.name==="scroll"){continue;};//maybe this check will work?1
     let invPos = player.inventory.findIndex(obj => obj.name === craftQueue[rawItem].spriteData.name);//player.inventory[invPos].amt to compare
@@ -330,15 +351,17 @@ function craftItem(){
     if (player.inventory[invPos].amt >= craftableItems[currentItem][craftQueue[rawItem].spriteData.name]){
       //player has item and enough of it, continue
       //console.log(`has enough ${player.inventory[invPos].itemObj.spriteData.name}`)
+      itemCheck-=1;
       continue;
     } else {
       //player has item but not enough, go to next iter in outer for loop
       //console.log(`not enough ${rawItem}`
-      popMessage(`You don't have enough ${rawItem}`);
+      popMessage(`You don't have enough ${craftQueue[rawItem].spriteData.name}`);
       craftQueue = [];
       return;
     }
   }
+  if (itemCheck!==0){return};
   //if get here craft item -- subtract required items from player.inventory and add crafted item to 
   let item;
   let craftingExp = 0;
@@ -1058,8 +1081,10 @@ function cook(name){
 let foodInfo = {
   //food by name
   "fish":{
-    "health":0,
-    "time":0
+    "health":3,
+    "time":0,
+    "poison":true,
+    "factor":4
   },
   "cookedfish":{
     "health":5,//implying positive 2, maybe some food is poisonous! or food health could have chance to heal +/-, etc
@@ -1156,28 +1181,211 @@ function useItem(name){//maybe make a separate file of player related functions?
     //other edible cases here
       eat(name)
       return;
+    case "arrow":
+    //and other arrow/projectile types?
+      console.log("got to arrow case");
+      if (player.holding.name==="longbow" || player.holding.name==="oakbow"){
+        if (player.inventory[player.invPosition].name==="arrow" && player.inventory[player.invPosition].amt>0){
+          if (player.lastAttack+500 > Date.now()){
+            return;
+          } else {
+            player.lastAttack=Date.now();
+          }
+          //fire arrow
+          //bow and player archery lvl (and maybe arrow type) determine damage
+          //projectile obj gives xp if hit lands and fromPlayer===true
+          addToInv("arrow", -1);
+          new Projectile("arrow", playerX, playerY, player.lastDirection, 10, 100, 5, true);
+        } else {
+          popMessage("Out of ammo!");
+        }
+      }
   }
-
 }
 
-function addToInv(name){
+function addToInv(name, amt=null){
+  if (!amt){
+    amt=1;
+  }//else it is defined
   if (name in playerObjects){
     player.inventory.push({"name":name, "itemObj":new pObjList[name]});
     return;
   }
   if (player.inventory.find(obj => obj.name === name)){
     let invPos = player.inventory.findIndex(obj => obj.name ===name);
-    player.inventory[invPos].amt += 1;
+    player.inventory[invPos].amt += amt;
   } else {
-    player.inventory.push({'name':name, 'amt':1, "itemObj":{"spriteData":gameObjects[name]}})
+    player.inventory.push({'name':name, 'amt':amt, "itemObj":{"spriteData":gameObjects[name]}})
   }
 }
 
 //end extra player functions//////////////////////////////////////////////////////////////////////////
 
+//PROJECTILE for general use//////////////////////////////////////////////////////////////////////////
+//for NPC to send projectile at player, must be aggro and depending on direction, x OR y must be same as playerX OR playerY
+// i.e. if npc is aggro and since direction === right OR left, if playerY===npcY, throw projectile
+//                                direction === up OR down, if playerX===npcX, throw projectile, make sense?
+//but now have to account for name+direction to get directional object thrown
+//   and make exception for objects like boulders where direction doesn't matter
+let directionalProjectiles = ["arrow"];//projectiles that direction matters (name+direction makes "arrowup")
+function Projectile(name, x, y, direction, distance, speed, damage, fromPlayer=false){
+  this.x=x;
+  this.y=y;
+  this.direction=direction;
+  /*
+  switch(this.direction){//so not starting on origin tile and colliding with shooter!
+    case "up":
+      this.y-=1;
+      break;
+    case "down":
+      this.y+=1;
+      break;
+    case "left":
+      this.x-=1;
+      break;
+    case "right":
+      this.x+=1;
+  }
+  */
+  this.prevX = this.x;
+  this.prevY = this.y;
+  //this.direction = direction;//remember name+direction for sprite
+  this.distance = distance;
+  this.damage = damage;
+  if (directionalProjectiles.includes(name)){
+    this.spriteData = JSON.parse(JSON.stringify(gameObjects[name+direction]));
+  } else {
+    this.spriteData = JSON.parse(JSON.stringify(gameObjects[name]));
+  }
+  this.start=true;
+  this.finished = false;
+  this.projectileInterval = setInterval(() => {
+    try {
+      if (tile_map[this.prevX][this.prevY].projectiles!==undefined){
+        tile_map[this.prevX][this.prevY].projectiles=[]
+      }
+    } catch(err){
+
+    }
+    this.start=false;
+    try {
+      if (!tile_map[this.x][this.y].projectiles) {
+        tile_map[this.x][this.y]["projectiles"] = [];
+      }
+    } catch (err) {
+      // handle the exception
+    }
+    if (this.finished){
+      try{
+        tile_map[this.x][this.y].projectiles=[];
+      } catch(err){
+        //handle exception
+      }
+      clearInterval(this.projectileInterval);
+      this.x==null;
+      this.y=null;
+      this.prevX=null;
+      this.prevY=null;
+      this.direction=null;//remember name+direction for sprite
+      this.distance=null;
+      this.damage =null;
+      this.spriteData =null;
+      this.start==null;
+      this.finished =null;
+      this.projectileInterval=null;
+      return;
+    }
+    try{
+      tile_map[this.x][this.y].projectiles.push(this.spriteData);
+    } catch(err){
+      //handle exception
+    }
+    //increment x or y dpdn direction
+    this.prevX=this.x;
+    this.prevY=this.y;
+    switch(this.direction){
+      case "up":
+        this.y-=1;
+        break;
+      case "down":
+        this.y+=1;
+        break;
+      case "left":
+        this.x-=1;
+        break;
+      case "right":
+        this.x+=1;
+    }
+
+    //check collision, if fromPlayer, do not damage player if run into it for some reason
+    let proj_collision = projCollision(this.x, this.y);
+    switch(proj_collision){
+      case "player":
+        //hit player
+        if (!fromPlayer){
+          player.getAttacked(this.damage);
+          this.finished=true;
+        }
+        break;
+      case "npc":
+        //hit npc
+        if (!fromPlayer){return;};//for now npcs can't shoot each other
+        console.log("projectile hit npc!");
+        //get npc by id, npc.getAttacked(this.damage);
+        let npc;
+        for (npc in tile_map[this.x][this.y].objects){
+          //filterNpcById(npcs, tile_map[playerX][playerY-2].objects[1].id)[0].getAttacked(10)
+          if (tile_map[this.x][this.y].objects[npc].type==="npc"){
+            filterNpcById(npcs, tile_map[this.x][this.y].objects[npc].id)[0].getAttacked(damage);
+            player.incrementSkill("archery", 2);
+          }
+        }
+        this.finished=true;
+        break;
+      case true:
+        //hit object or tile with collision
+        this.finished=true;
+        break;
+    }
+
+    this.distance-=1;
+    if (this.distance===0){
+      this.finished = true;
+    }
+  }, speed);
+}
+
+function projCollision(x,y){
+  //check collision of tile itself
+  if (tile_map[x][y].sprite.name!=="water" && tile_map[x][y].sprite.collision){
+    return true;
+  }
+  //check collision of any objects or npcs on tile
+  if (tile_map[x][y].objects.length!==0){
+    //npcs first
+    let npc;
+    for (npc in tile_map[x][y].objects){
+      if (tile_map[x][y].objects[npc].type=="npc"){
+        return "npc";//maybe if fire arrow/spell, interacts with obj
+      }
+    }
+    //objects second
+    let obj;
+    for (obj in tile_map[x][y].objects){
+      if (tile_map[x][y].objects[obj].collision){
+        return true;//maybe if fire arrow/spell, interacts with obj
+      }
+    }
+  }
+  if (x===playerX && y===playerY){
+    return "player";
+  }
+}
+
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
 function Player(){
-  this.lastDirection = null;
+  this.lastAttack = Date.now();
+  this.lastDirection = "right";
   this.lastTime = Date.now();
   this.lastMove = Date.now();
   this.regenTime=5000;
@@ -1191,7 +1399,8 @@ function Player(){
     "woodcutting":{"xp":0,"lvl":1},
     "fishing":{"xp":0, "lvl":1},
     "crafting":{"xp":0, "lvl":1},
-    "survival":{"xp":0, "lvl":1}
+    "survival":{"xp":0, "lvl":1},
+    "archery":{"xp":0, "lvl":1}
   };
   this.inventory = [];
   this.lastInventory = JSON.stringify(this.inventory);
@@ -1246,7 +1455,8 @@ function Player(){
         }
     }
   }
-  this.usableItems = ['fish', 'cookedfish', 'apple', 'tunafish', 'cookedtuna'];
+  //need to figure out way to put this in outside fxn, unnecessary to have all these fxns in player
+  this.usableItems = ['fish', 'cookedfish', 'apple', 'tunafish', 'cookedtuna', 'arrow'];
   //equip is really just player use
   this.equip = function(){//if item equipped, unequip it. if not equipped, equip it.
                               //if item equipped and equipping a different item, switch it.
@@ -1257,6 +1467,13 @@ function Player(){
     if (playerCrafting){
       //put item in craftQueue
       if (craftQueue.length>=20){return;};
+      //return return if item already in queue
+      let item;
+      for (item in craftQueue){
+        if (craftQueue[item]===itemObject){
+          return;
+        }//else it's not in list
+      }
       craftQueue.push(itemObject);
       return;//could be problematic, but work for now
     }
@@ -1270,8 +1487,17 @@ function Player(){
       if (player.inventory[player.invPosition].name==="log" && player.holding.name==="axe"){
         //split logs, add new or increment in player.inventory
         //split logs will have to be new item, possibly new sprite
-        popMessage("You split a log");
+        //-log, plus 2 split logs
+        addToInv("log", -1);
+        addToInv("splitlog", 2);
+        popMessage("You split a log...");
         return;
+      } 
+      else if (player.inventory[player.invPosition].name==="splitlog" && player.inventory[player.invPosition].amt > 0 && player.holding.name==="knife"){
+        addToInv("splitlog", -1);
+        addToInv("arrow", 4);
+        popMessage("You whittle some primitive arrows...");
+        return;//then primitive "arrow" can be used with arrowhead to make badass arrow?
       }
     }
     if (itemObject===player.holding.itemObj){
@@ -1358,9 +1584,10 @@ function Player(){
       popMessage("You slip and bust your ass in the raft trying to be cute...");
     }
     target.getAttacked(this.skills.strength.lvl + bonus);
-    playSound(hit_sound);
+    //playSound(hit_sound);
   }
   this.getAttacked = function(damage){
+    playSound(hit_sound);
     let dodge = Math.floor(Math.random()*this.skills.defense.lvl);
     console.log("dodge:" + dodge);
     if (player.body.name!=="nothing"){
@@ -1418,6 +1645,7 @@ var playerStats = localStorage.getItem("playerStats");
 if (playerStats!==null){
   player.skills=JSON.parse(playerStats);
   playerStats=null;
+  //add any skills player doesn't have from before updates
   if (player.skills.woodcutting===undefined){
     player.skills['woodcutting']={"xp":0,"lvl":1};
   }
@@ -1436,13 +1664,18 @@ if (playerStats!==null){
   if (!player.skills.cooking){
     player.skills['cooking']={"xp":0, "lvl":1};
   }
+  if (!player.skills.archery){
+    player.skills['archery']={"xp":0, "lvl":1};
+  }
 }
 //get inventory from local
-var pObjList = {
+var pObjList = {//this is for reconstituting saved items
   "axe":Axe,
   "fishingpole":Fishingpole,
   "ironsword":Ironsword,
-  "leatherarmor":Leatherarmor
+  "leatherarmor":Leatherarmor,
+  "longbow":Longbow,
+  "knife":Knife
   //next here will be fishingpole
 }
 
@@ -1465,6 +1698,10 @@ if (playerInv!=='undefined'){
 if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="axe")){
   player.holding={"name":"nothing", "itemObj":null};
   player.inventory.push({"name":"axe", "itemObj":new Axe})
+}
+if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="knife")){
+  player.holding={"name":"nothing", "itemObj":null};
+  player.inventory.push({"name":"knife", "itemObj":new Knife})
 }
 /*
 if (!player.inventory.some(obj => obj.hasOwnProperty("name") && obj["name"]==="fishingpole")){
@@ -1688,18 +1925,6 @@ function movePlayer(direction, keyDown) {
     return;
   }
 }
-/*
-  if (player.frozen === true) {
-    return;
-  }
-*/
-  /*
-  if (Date.now() < player.lastMove + 100) {
-    return;
-  }
-
-  player.lastMove = Date.now();
-  */
 
 function drawPlayer(){
     let ghostLoc;
@@ -1782,26 +2007,6 @@ function drawInv(){
     ctx.fillText(`${itemAmt}`,275,247)
   }
   //draw arrows baseTile['upArrow'/'downArrow']
-  /*
-  ctx.drawImage(spriteSheet, baseTiles['upArrow'][0], baseTiles['upArrow'][1], 16,16
-    ,260,210, 50,40);
-  ctx.drawImage(spriteSheet, baseTiles['downArrow'][0], baseTiles['downArrow'][1], 16,16
-    ,262,250, 50,40);
-    function clickInvDown(event, uicanvas){
-  const rect = uicanvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  return x > 275 && y < 280 && y > 260;
-}
-
-function clickInvUp(event, uicanvas){
-  const rect = uicanvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
-  return x > 275 && y < 235 && y > 215;
-}
-  */
-
   drawIcon("UPARROW", 275, 220);
   drawIcon("DOWNARROW", 275, 265);
   //draw equip button, need to change function to check .equipTo (i.e. holding, wearing, footwear, etc)
@@ -1894,13 +2099,13 @@ function Fishingpole(){
         tile_map[this.bobberX][this.bobberY].objects = filterObjByKeyVal(tile_map[this.bobberX][this.bobberY].objects, "name", "bobber");
         //console.log("something is tugging at the line!");//change to dropList text
         popMessage("Something is tugging at the line!");
-        if (Math.floor(Math.random()*player.skills.survival.lvl) + Math.floor(Math.random()*player.skills.fishing.lvl) < Math.floor(Math.random()*8)){
+        if (Math.floor(Math.random()*player.skills.survival.lvl) + Math.floor(Math.random()*player.skills.fishing.lvl) < Math.floor(Math.random()*4)){
           popMessage("Your fishing pole snapped in half!");
           removeFirstOfItem("fishingpole");
           player.holding={"name":"nothing", "itemObj":null};
           return;
         }
-        if (Math.floor(Math.random()*player.skills.fishing.lvl) >= Math.floor(Math.random()*4)){
+        if (Math.floor(Math.random()*player.skills.fishing.lvl) > Math.floor(Math.random()*4)){
           //draw fish on next tile
           //pick random fish, high chance for regular fish, lower chance for tuna and up
           //then "You caught a [fish]!"  in dropList 
@@ -1941,6 +2146,19 @@ function Leatherarmor(){
   }
 }
 
+function Longbow(){
+  this.equippable=true;
+  this.spriteData = JSON.parse(JSON.stringify(playerObjects['longbow']));
+  this.spriteData.id=generateID();
+  this.attBonus = 0;
+  this.isHeld = false;
+  this.onGround = false;
+  this.action = function(x, y){//if player.holding.name==="longbow" || "oakbow" && has arrows, FIRE
+    //no necessary action
+    //bow_release.play();
+  }
+}
+
 function Ironsword(){
   this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['ironsword']));
@@ -1959,6 +2177,18 @@ let whacksPerTree = 0;
 let whackValues = [];//append whacksPerTree here. whack rate is total of whackValues divided by whackValues.length (or treesChopped)
 let whackRate = null;
 let lastWhack = Date.now();
+function Knife(){
+  this.equippable=true;
+  this.spriteData = JSON.parse(JSON.stringify(playerObjects['knife']));
+  this.spriteData.id=generateID();
+  this.attBonus=1;
+  this.isHeld=false;
+  this.onGround=false;
+  this.action = function(){
+    //don't need anything yet
+    //playSound(knife_sound)? lol
+  }
+}
 function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
   this.equippable=true;
   this.spriteData = JSON.parse(JSON.stringify(playerObjects['axe']));
@@ -1992,7 +2222,7 @@ function Axe(){//ex) player obtains axe, player.inventory.push(new Axe())
             total+=whackValues[value];
           }
           whackRate=Math.floor(total/treesChopped);//(or whackValues.length)
-          console.log(`Trees chopped: ${treesChopped}`);
+          console.log(`Trees hwhacked: ${treesChopped}`);
           console.log(`Hwhacks per last tree: ${whacksPerTree}`);
           console.log(`Hwhack Rate: ${whackRate}`);
           whacksPerTree=0;
@@ -2056,44 +2286,14 @@ function clearUserMap (){
   console.log("refresh to clear, place another tile before refreshing to cancel");
 }
 
-let reloading = false;
-
 //pretty obvious function. works for player and npcs (so far)
 function checkCollision(nextX, nextY, npc=false){
   if (!tile_map || reloading){
     return;
   }
-  if (nextX < 11 || nextX > 89 || nextY < 11 || nextY > 89){
-    //case of main map VVV
-    //prob need to make this own function to keep checkCollision clean
-    if (localStorage.getItem("tileMapSector")==="main" && playerSailing && nextY < 11){
-      //set playerY to 89, playerX stays same because you can only exit with raft from north of map anyway
-      playerY = 89;
-      playerRaft.y = 89;
-      localStorage.setItem("playerLoc", JSON.stringify([playerX, 89]));
-      localStorage.setItem("raftLoc", JSON.stringify([playerX, 89]));
-      //new map and reload
-      localStorage.setItem("tileMapSector", "northsea");
-      reloading = true;
-      location.reload();
-      return;
-    }
-    else if (localStorage.getItem("tileMapSector")==="northsea"){
-      //will have to handle all directions now
-      //for now just north
-      if (nextY > 89){
-        playerY=11;//why is this not working
-        playerRaft.y = 11;
-        localStorage.setItem("playerLoc", JSON.stringify([playerX, 11]));
-        localStorage.setItem("raftLoc", JSON.stringify([playerX, 11]));
-        //new map and reload
-        localStorage.setItem("tileMapSector", "main");
-        reloading = true;
-        location.reload();
-        return;
-      }
-    }
-  }
+
+  checkNextMap(nextX, nextY);
+
   var object;
   for (object in tile_map[nextX][nextY]['objects']){
     if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
@@ -2492,6 +2692,7 @@ function Spider(){
   }
   
   this.getAttacked = function(damage){
+    playSound(hit_sound);
     this.hp-=damage;
   }
 }
@@ -2558,6 +2759,7 @@ function Rat(){
   }
   this.getAttacked = function(damage){
     //receive attack from player
+    playSound(hit_sound);
     this.hp-=damage;
   }
 }
@@ -2629,6 +2831,132 @@ function Skeleton(){
   }
   this.getAttacked = function(damage){
     //receive attack from player
+    playSound(hit_sound);
+    this.hp-=damage;
+  }
+}
+
+function Gnoll(){
+  this.name="gnoll";//its in spriteData but had to do it this way for some reason
+  this.hp = 40;//lel just testing
+  this.spriteData=JSON.parse(JSON.stringify(gameObjects['gnoll']));
+  this.spriteData.id=null;
+  this.x=null;
+  this.y=null;
+  this.domain = null;
+  this.lastTime=Date.now();//timestamp
+  this.strength = 5;
+  this.delay = 2000;
+  this.aggro = false;
+  this.lastAggro=Date.now();
+  this.strength = 5;
+  this.lastDirection="right";
+  this.retreatTimeout = null;
+  this.retreating = false;
+  this.retreatCount = 0;
+  this.update = function(){
+    if (this.hp<1){
+      if (Math.floor(Math.random()*100 > 90)){
+        game_objects.push(new Lootbag("gnoll", this.x, this.y, "arrow"));
+      } else {
+        game_objects.push(new Lootbag("gnoll", this.x, this.y, "coin"));
+      }
+      player.incrementSkill("strength", 4);//what if something else kills it though?
+      player.incrementSkill("health", 4);
+      playSound(skele_die_sound);
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
+    let now = Date.now();
+    let restTime = this.delay;//Math.floor(Math.random()*this.delay);
+    
+    if (now > this.lastTime+restTime){
+      this.lastTime=now;
+      //check distance to player
+      if (distToPlayer(this.x, this.y)<=8){
+        this.retreatTimeout = setTimeout(() => {
+          //gnoll is probably attacking player, runs away after a second
+          this.retreating=true;
+          this.delay=1000;
+          //clearInterval(this.retreatInterval);
+          this.retreatTimeout = null;
+        }, this.delay);
+        let shootDirection = "right";//just default in case something weird happens
+        //this gonna be ugly but should work - in lieu of actually using lastDirection. would entail changing moveNPC to return a 4th thingy :/
+        if (playerY===this.y){//on the same horizon
+          //left or right shot
+          if (playerX < this.x){
+            //shoot left
+            shootDirection="left";
+            this.spriteData.facing="left";
+            new Projectile("pebble", this.x, this.y, shootDirection, 7, 100, this.strength);
+          } else {
+            //shoot right
+            this.spriteData.facing="right";
+            shootDirection="right";
+            new Projectile("pebble", this.x, this.y, shootDirection, 7, 100, this.strength);
+          }
+        } 
+        else if (playerX===this.x){//on the same vertice
+          //up or down 
+          if (playerY < this.y){
+            //shoot up
+            shootDirection="up";
+            new Projectile("pebble", this.x, this.y, shootDirection, 7, 100, this.strength);
+          } else {
+            //shoot down
+            shootDirection="down";
+            new Projectile("pebble", this.x, this.y, shootDirection, 7, 100, this.strength);
+          }
+        }
+        this.aggro=true;
+        this.lastAggro=Date.now();
+        //new Projectile("pebble", this.x, this.y, shootDirection, 7, 100, this.strength);
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+      var newCoords=null;
+      if (!this.retreating){
+        if (!this.aggro){
+          newCoords=moveNPC(this.x,this.y);//returns x,y
+        } else {
+          var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
+          newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
+          if (checkCollision(newCoords[0], newCoords[1], true)===true){
+            newCoords=[this.x, this.y, "right"];
+          }
+          if (newCoords[0]===playerX && newCoords[1]===playerY){
+            newCoords=[this.x, this.y, "right"];
+            player.getAttacked(this.strength);
+          }
+        }
+      } else {
+        //retreat!
+        newCoords=moveNPC(this.x,this.y);//random for now
+        this.retreatCount+=1;
+        if (this.retreatCount>=5){
+          this.retreating=false;
+          this.retreatCount=0;
+          this.delay=2000;
+        }
+      }
+      //remove self from current tile
+      /*
+      if (newCoords[2]!==null){
+        this.spriteData.facing=newCoords[2];
+      }
+      */
+      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
+      this.x=newCoords[0];
+      this.y=newCoords[1];
+      //add self to new tile
+      tile_map[this.x][this.y].objects.push(this.spriteData)
+    }
+  }
+  this.getAttacked = function(damage){
+    //receive attack from player
+    playSound(hit_sound);
     this.hp-=damage;
   }
 }
@@ -2640,7 +2968,7 @@ function generateID(){//this is not best practice, just for testing. max of 1000
 }
 var game_ids=[0];//if id in list, regenerate, if id not in list add it, remove id from game_ids on object delete
 
-const generatorList = {"spider":Spider, "rat":Rat, "skeleton":Skeleton}
+const generatorList = {"spider":Spider, "rat":Rat, "skeleton":Skeleton, "gnoll":Gnoll}
 function getValidSpawnCoord(minX, minY, maxX, maxY){//useful ass function!
   let validCoords = [];
   for (let x = minX; x < maxX; x++){
@@ -2789,7 +3117,7 @@ function drawMap(disp_area){
             //it has an id, but does it have an object in game_objects
             if (!isSpriteIdInList(game_objects, tile_map[sprtX][sprtY]['objects'][object].id)){
               delete tile_map[sprtX][sprtY]['objects'][object];
-              continue;
+              continue;//this means object was deleted from game_objects
             }
           }
           
@@ -2812,8 +3140,16 @@ function drawMap(disp_area){
               //remove the objectless sprite!
               delete tile_map[sprtX][sprtY]['objects'][object];
             }
-            
           }
+        }
+      }
+      //draw projectiles
+      if (tile_map[sprtX][sprtY].projectiles){
+        let project;
+        for (project in tile_map[sprtX][sprtY]['projectiles']){
+          sprtLoc=tile_map[sprtX][sprtY]['projectiles'][project]['sprite'];
+          ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
+            col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
         }
       }
     }
@@ -2873,89 +3209,26 @@ function update(){
   }
 }
 
+//start loading animation
+//turns off animation
+ctx.fillStyle="green";
+ctx.font = "24px Arial";
+let loadText = "loading"
+
+let animationInterval;
+let animationCount = 0;
+
+animationInterval = setInterval(() => {
+  ctx.clearRect(0,0,0,304);
+  ctx.fillText(`${loadText}`, 100,150);
+  loadText+=".";
+  animationCount++;
+  if (animationCount>=8){
+    clearInterval(animationInterval);
+  }
+}, 500);
 
 setTimeout(() => {
-  //signs around map to help player////////////////////////////////////////////////////////////////////////////////
-  //put signs here cause issues with tile_map loading
-  if (localStorage.getItem("tileMapSector")==="main"){
-    game_objects.push(new Sign(24, 22, "                    Welcome to Canvas II: Ghosts!                      At the bottom right is your inventory, scroll through with the arrows and press/click/tap F to use/equip the item. Walk into stuff to interact with it. Equip a weapon and go fight something!"))
-    game_objects.push(new Sign(23, 62, "                    Archibald Village              PLEASE DO NOT FEED THE RATS"));
-    game_objects.push(new Sign(33, 61, "                         Cellar"));
-    game_objects.push(new Sign(48, 78, "                    Miia's Nail House                                  To learn how to craft an item, find recipe scrolls. Walk into the crafting table and put the scroll and appropriate items in the queue with F. You only need to queue one of each item regardless of how many the recipe calls for. Craft the item with C. You won't lose the scroll but the ingredients will be removed from your inventory."));
-    game_objects.push(new Sign(76, 83, "                    Theunorg's Chapel"));
-    //pier near house, boat to be added
-    game_objects.push(new Sign(34, 38, "Gone fishing, charters to resume soon...                 Someone stole the sail to the raft, so you'll have to make a new one. If you've never made one before, I think I have some instructions for crafting one somewhere in my house north of here.                              -Fish Monger"));
-    tile_map[48][29].objects.pop()//removing an old useless chest instead of just editing the map lol
-    game_objects.push(new Treasurechest2(48, 29, "scroll", "sail"));//new chest with sail scroll
-    let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
-    if (!raftLoc){
-      raftLoc = [34, 42];
-      localStorage.setItem("raftLoc", JSON.stringify(raftLoc));
-      playerRaft = new Raft(34, 42);
-    } else {
-      playerRaft = new Raft(raftLoc[0], raftLoc[1]);
-    }
-    raftID = playerRaft.spriteData.id;
-    game_objects.push(playerRaft);
-    game_objects.push(new craftingTable(50, 80));
-    game_objects.push(new Treasurechest2(50, 82, "scroll", "fishingpole"));
-    //archie village mods
-    tile_map[34][56].objects.push(gameObjects['trashcan']);
-    game_objects.push(new Sign(34, 57, "                        WARNING                            Stand next to the trashcan and try to use an item and it will be thrown away forever! Throw your duplicate/deprecated items in here or when you want to start from scratch. Even if you delete your axe, you always start with a new one"));
-    tile_map[32][62].objects=[gameObjects['stoneplate']];
-    game_objects.push(new Lockeddoor(32,62, "Opened the cellar door with a brass key."));
-    game_objects.push(new Opendoor(28,59));
-    game_objects.push(new Opendoor(28,60));
-    game_objects.push(new Opendoor(20,61));
-    game_objects.push(new Opendoor(16,61));
-    game_objects.push(new Opendoor(20,65));
-    //Miias house
-    game_objects.push(new Opendoor(49,79));
-    //chapel
-    game_objects.push(new Opendoor(68,81));
-    //Mongershouse
-    game_objects.push(new Opendoor(48,32))
-    game_objects.push(new Opendoor(22,20));
-  } 
-  else if (localStorage.getItem("tileMapSector")==="northsea"){
-    let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
-    playerRaft = new Raft(raftLoc[0], raftLoc[1]);
-    raftID = playerRaft.spriteData.id;
-    game_objects.push(playerRaft);
-    tile_map[65][87].objects.push(gameObjects['rockpile']);
-    game_objects.push(new Sign(65, 86, "South to Old Haven"));
-    //tile_map[50][50].objects.push(gameObjects['pathVERT']);
-    tile_map[42][12].objects.push(gameObjects['rockpile']);
-    game_objects.push(new Sign(42, 11, "North to mainland"));
-    //Klinthios's island hut
-    game_objects.push(new Opendoor(50,35, "This door is weathered by wind and saltwater..."));
-    game_objects.push(new Opendoor(51,39,"The door opens, wafting fish smell everywhere..."))
-    game_objects.push(new Treasurechest2(25, 59, "scroll", "leatherarmor"));
-    game_objects.push(new Shopkeep(50,37, "Klinthios", "Klinthios: Oh dear, can you kill all those nasty rats please?!"));//need better way to build npcs like this
-  }
-  //end signs//////////////////////////////////////////////////////////////////////////////////////////////////////
-  
-  //map hotfixes///////////////////////////////////////////////////////////////////////////////////////////////////
-  if (localStorage.getItem("tileMapSector")==="main"){
-    tile_map[47][36].sprite = gameObjects['water'];//just test, it works
-  }
-
-  //putting npcs in areas
-  //name, location, number, frequency, xmin, ymin, xmax, ymax
-  if (localStorage.getItem("tileMapSector")==="main"){
-    generateNPC("skeleton", "graveyard", 12, 5000, 78, 89, 76, 89);//down by the graveyard
-    generateNPC("spider", "dungeon", 15, 2500, 42, 68, 39, 70);//guarding dungeon entrance
-    generateNPC("rat", "village", 12, 3000, 11, 26, 57, 78);//farm village on west coast
-    generateNPC("spider", "mountaintop", 3, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest
-  } 
-  else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
-    generateNPC("spider", "dungeon", 25, 2500, 11, 89, 11, 89);
-    generateNPC("rat", "cellar", 6, 2000, 31, 33, 63, 67);
-  }
-  else if (localStorage.getItem("tileMapSector")==="northsea"){
-    generateNPC("rat", "island1", 5, 5000, 50, 58, 20, 28);
-    generateNPC("skeleton", "island2", 5, 5000, 21, 29, 58, 64);
-  }
-  //end hotfixes//////////////////maybe could put these in separate hotfix.js/////////////////////////////////////
-  setInterval(update,100)
+  initializeMap();
+  setInterval(update,100);
 },4000);
