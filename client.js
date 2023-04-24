@@ -49,7 +49,7 @@ switch (tileMapSector){
 }
 //debug stuffss
 
-let masterDebug = true;
+let masterDebug = false;
 function debugMode(){
   if (masterDebug === false){
     masterDebug=true;
@@ -83,7 +83,7 @@ function deathScreen(){
   //working on this
 }
 
-var master_collision = false
+var master_collision = false;
 function toggleCollision(){
   if (master_collision===false){
     master_collision=true;
