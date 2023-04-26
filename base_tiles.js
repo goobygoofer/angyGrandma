@@ -81,6 +81,7 @@ baseTiles = {//redo entirely and in order
     "craftTable":[192,528],//just this for now as a click point
     "lootbag":[192,240],
     "abyss":[160,384],
+    "void":[240,1232],//just blank space for event tiles (like map exit or dungeon stairs)
     "dungeonStairs":[0,352],
     "fish":[256, 480],
     "portalfish":[224,480],
@@ -122,13 +123,20 @@ baseTiles = {//redo entirely and in order
     "knife":[288,432],
     "knifeL":[304,464],
     "knifeR":[304,432],
+    "spikein":[0,864],
+    "spikeout":[0,848],
     //projectiles -- all these have up down left right, bit bulky but makes easier in Projectile fxn
     "arrowup":[208,240],
     "arrowdown":[224,240],
     "arrowleft":[240,240],
     "arrowright":[256,240],
     "arrow":[48,1216],
-    "pebble":[208,576]
+    "pebble":[208,576],
+    "whitewave":[144,736],
+    "fireballup":[96,256],
+    "fireballdown":[112,256],
+    "fireballleft":[128,256],
+    "fireballright":[144,256]
   }
 
   npcTiles = {
@@ -142,7 +150,11 @@ baseTiles = {//redo entirely and in order
     "spiderL":[112, 240],
     "shopkeepR":[16,128],//no shopkeepL yet
     "gnollR":[224,576],
-    "gnollL":[240,576]
+    "gnollL":[240,576],
+    "rangeGoblinR":[80,336],
+    "rangeGoblinL":[96,336],
+    "mageLichR":[80,160],
+    "mageLichL":[64,160]
   }
 
 playerObjects = {
@@ -187,6 +199,24 @@ playerObjects = {
     }
 }
   gameObjects = {
+    "rangeGoblin":{
+        "name":"rangeGoblin",
+        "id":null,
+        "sprite":{"left":npcTiles['rangeGoblinL'], "right":npcTiles['rangeGoblinR']},
+        "facing":"right",
+        "type":"npc",
+        "collision":true,
+        "attackable":true
+    },
+    "mageLich":{
+        "name":"mageLich",
+        "id":null,
+        "sprite":{"left":npcTiles['mageLichL'], "right":npcTiles['mageLichR']},
+        "facing":"right",
+        "type":"npc",
+        "collision":true,
+        "attackable":true
+    },
     "gnoll":{
         "name":"gnoll",
         "id":null,
@@ -236,8 +266,16 @@ playerObjects = {
     "pebble":{
         "name":"pebble",
         "sprite":baseTiles['pebble'],
+        "type":"object",
         "collision":false,
         "itemSprite":baseTiles['pebble']
+    },
+    "whitewave":{
+        "name":"whitewave",
+        "sprite":baseTiles['whitewave'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['whitewave']
     },
     "arrow":{
         "name":"arrow",
@@ -245,6 +283,41 @@ playerObjects = {
         "type":"object",
         "collision":false,
         "itemSprite":baseTiles['arrow']
+    },
+    "fireball":{
+        "name":"fireball",
+        "sprite":baseTiles['fireball'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fireball']
+    },
+    "fireballup":{
+        "name":"fireballup",
+        "sprite":baseTiles['fireballup'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fireballup']
+    },
+    "fireballdown":{
+        "name":"fireballdown",
+        "sprite":baseTiles['fireballdown'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fireballdown']
+    },
+    "fireballleft":{
+        "name":"fireballleft",
+        "sprite":baseTiles['fireballleft'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fireballleft']
+    },
+    "fireballright":{
+        "name":"fireballright",
+        "sprite":baseTiles['fireballright'],
+        "type":"object",
+        "collision":false,
+        "itemSprite":baseTiles['fireballright']
     },
     "arrowup":{
         "name":"arrowup",
@@ -402,6 +475,24 @@ playerObjects = {
         "sprite":baseTiles["abyss"],
         "type":"base-tile",
         "collision":true
+    },
+    "void":{
+        "name":"void",
+        "sprite":baseTiles['void'],
+        "type":"object",
+        "collision":true
+    },
+    "spikeout":{
+        "name":"spikeout",
+        "sprite":baseTiles["spikeout"],
+        "type":"object",
+        "collision":false,
+    },
+    "spikein":{
+        "name":"spikein",
+        "sprite":baseTiles["spikein"],
+        "type":"object",
+        "collision":false
     },
     "lootbag":{
         "name":"lootbag",
