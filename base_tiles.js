@@ -125,6 +125,7 @@ baseTiles = {//redo entirely and in order
     "knifeR":[304,432],
     "spikein":[0,864],
     "spikeout":[0,848],
+    "stairsR":[32,352],
     //projectiles -- all these have up down left right, bit bulky but makes easier in Projectile fxn
     "arrowup":[208,240],
     "arrowdown":[224,240],
@@ -667,6 +668,13 @@ playerObjects = {
     "dungeonStairs":{
         "name":"dungeonStairs",
         "sprite":baseTiles["dungeonStairs"],
+        "type":"object",
+        "collision":true,
+        "id":null
+    },
+    "stairsR":{
+        "name":"stairsR",
+        "sprite":baseTiles['stairsR'],
         "type":"object",
         "collision":true,
         "id":null

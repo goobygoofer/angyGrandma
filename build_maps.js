@@ -15,6 +15,11 @@
 //    *places like the main map (main.js) should have invisible collision (iterate over with void sprite as tile object)
 //     these can be removed if an area is added or something, but so far the world expands at the deepnorthsea map (deepnorthsea.js) 
 //    
+//sub_maps
+//    -sub_maps will be named something else and stored in other variables
+//    -mapExit now has a false bool by default as the last param
+//     if sub===true, calls nextSubSector instead of nextTileMapSector
+//    -main tile_map is kept, 
 
 let reloading = false;
 
@@ -52,8 +57,10 @@ function initializeMap(){
     game_objects=[];
     game_object_ids=[];
     npcs = [];
-    
+    waterAccess = false;
+    let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
     if (localStorage.getItem("tileMapSector")==="main"){
+        waterAccess = true;
         game_objects.push(new mapSign(26,34));
         game_objects.push(new Sign(24, 22, "                    Welcome to Canvas II: Ghosts!                      At the bottom right is your inventory, scroll through with the arrows and press/click/tap F to use/equip the item. Walk into stuff to interact with it. Equip a weapon and go fight something!"))
         game_objects.push(new Sign(23, 62, "                    Archibald Village              PLEASE DO NOT FEED THE RATS"));
@@ -64,16 +71,6 @@ function initializeMap(){
         game_objects.push(new Sign(34, 38, "Gone fishing, charters to resume soon...                 Someone stole the sail to the raft, so you'll have to make a new one. If you've never made one before, I think I have some instructions for crafting one somewhere in my house north of here.                              -Fish Monger"));
         tile_map[48][29].objects.pop()//removing an old useless chest instead of just editing the map lol
         game_objects.push(new Treasurechest2(48, 29, "scroll", "sail"));//new chest with sail scroll
-        let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
-        if (!raftLoc){
-            raftLoc = [34, 42];
-            localStorage.setItem("raftLoc", JSON.stringify(raftLoc));
-            playerRaft = new Raft(34, 42);
-        } else {
-            playerRaft = new Raft(raftLoc[0], raftLoc[1]);
-        }
-        raftID = playerRaft.spriteData.id;
-        game_objects.push(playerRaft);
         game_objects.push(new craftingTable(50, 80));
         game_objects.push(new Treasurechest2(50, 82, "scroll", "fishingpole"));
         //archie village mods
@@ -101,10 +98,9 @@ function initializeMap(){
         generateNPC("spider", "mountaintop", 3, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest\\
         generateNPC("gnoll", "field", 3, 4500, 50,57, 15,31);
         generateNPC("rangeGoblin", "woods", 8, 5000, 17,41, 78,87);
-        //generateNPC("gnoll", "swamp", 3, 4500, 77,88, 53,59);
+        generateNPC("gnoll", "swamp", 3, 4500, 77,88, 53,59);
         //hazards
         //game_objects.push(new Spiketrap(26,24, 1000, 100));
-
         //establish border exits and any other exits (like dungeon stairs)
         //north border (currently only exit from main.js)
         for (let i=0;i<100;i++){
@@ -124,12 +120,10 @@ function initializeMap(){
         generateNPC("spider", "dungeon", 25, 2500, 11, 89, 11, 89);
         generateNPC("rat", "cellar", 6, 2000, 31, 33, 63, 67);
         tile_map[33][67].objects=[];
-        // Treasurechest2(x, y, item, scroll=null, popupText=null){//popup text tells what player got
         game_objects.push(new Treasurechest2(33, 67, "scroll", "longbow"));
         //HAZARDS
           //hallway of spikes!
         for (let i=48; i<87; i+=2){
-          //let randInt = Math.floor(Math.random()*1000+1000);
           game_objects.push(new Spiketrap(72, i, 500, 15));
         }
         game_objects.push(new mapExit(39, 47, "main", "dungeonStairs", 39,47));
@@ -139,10 +133,7 @@ function initializeMap(){
 
 
     else if (localStorage.getItem("tileMapSector")==="northsea"){
-        let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
-        playerRaft = new Raft(raftLoc[0], raftLoc[1]);
-        raftID = playerRaft.spriteData.id;
-        game_objects.push(playerRaft);
+        waterAccess = true;
         tile_map[65][87].objects.push(gameObjects['rockpile']);
         game_objects.push(new Sign(65, 86, "South to Old Haven"));
         tile_map[42][12].objects.push(gameObjects['rockpile']);
@@ -172,15 +163,13 @@ function initializeMap(){
     }
 
     else if (localStorage.getItem("tileMapSector")==="deepnorthsea"){
-      if (playerSailing){
-        let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
-        playerRaft = new Raft(raftLoc[0], raftLoc[1]);
-        raftID = playerRaft.spriteData.id;
-        game_objects.push(playerRaft);
-      }
+      waterAccess=true;
       //mapExits
       for (let i=0;i<100;i++){//exit south
         game_objects.push(new mapExit(i, 99, "northsea", "void", i, 0));
+      }
+      for (let i=0;i<100;i++){//exit north
+        game_objects.push(new mapExit(i, 0, "deepnorthsea_2", "void", i, 99));
       }
       //tiny island dungeon with mageLiches
       game_objects.push(new mapExit(55, 51, "northsea_dungeon", "dungeonStairs", 50,96))//figure out x/y old and new
@@ -192,6 +181,33 @@ function initializeMap(){
       //exits
       game_objects.push(new mapExit(50, 96, "deepnorthsea", "dungeonStairs", 55,51));
     }
-  //dungeon exits
-  //mapExit(x, y, map_name, type, newX, newY)
+
+    else if (localStorage.getItem("tileMapSector")==="deepnorthsea_2"){
+      waterAccess=true;
+      //exits
+      for (let i=0;i<100;i++){//exit south
+        game_objects.push(new mapExit(i, 99, "deepnorthsea", "void", i, 0));
+      }
+      game_objects.push(new mapExit(75,34, "lighthouse_1", "stairsR", 3,3));
+      game_objects.push(new mapExit(73,33, "lighthouse_1", "dungeonStairs", 1,2));
+    }
+    
+    else if (localStorage.getItem("tileMapSector")==="lighthouse_1"){
+      game_objects.push(new mapExit(1,2, "deepnorthsea_2", "stairsR", 73,33));
+      game_objects.push(new mapExit(3,3, "deepnorthsea_2", "dungeonStairs", 75,34));
+    }
+  //fix the dango boat
+  if (waterAccess){
+    if (playerSailing){
+      //player sailing, put boat at playerX/Y
+      playerRaft = new Raft(playerX, playerY);//oh wait is this even initialized by the time this runs? we shall see
+    } else {
+      //player not sailing, put boat at raftLoc
+      playerRaft = new Raft(raftLoc[0], raftLoc[1]);
+    }
+    raftID = playerRaft.spriteData.id;
+    game_objects.push(playerRaft);
+  } else {
+    //player in dungeon, don't put boat, prob just get rid of this else statement
+  }
 }
