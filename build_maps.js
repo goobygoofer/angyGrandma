@@ -60,6 +60,7 @@ function initializeMap(){
     waterAccess = false;
     let raftLoc = JSON.parse(localStorage.getItem("raftLoc"));
     if (localStorage.getItem("tileMapSector")==="main"){
+        rainChance = 50;
         waterAccess = true;
         game_objects.push(new mapSign(26,34));
         game_objects.push(new Sign(24, 22, "                    Welcome to Canvas II: Ghosts!                      At the bottom right is your inventory, scroll through with the arrows and press/click/tap F to use/equip the item. Walk into stuff to interact with it. Equip a weapon and go fight something!"))
@@ -93,7 +94,8 @@ function initializeMap(){
         game_objects.push(new Opendoor(22,20));
         //MOBS
         generateNPC("skeleton", "graveyard", 12, 5000, 78, 89, 76, 89);//down by the graveyard
-        generateNPC("spider", "dungeon", 15, 2500, 42, 68, 39, 70);//guarding dungeon entrance
+        generateNPC("skeleton", "test", 2, 5000, 10, 25, 10, 25);//test skletons
+        generateNPC("spider", "dungeon", 12, 2500, 42, 68, 39, 70);//guarding dungeon entrance
         generateNPC("rat", "village", 12, 3000, 11, 26, 57, 78);//farm village on west coast
         generateNPC("spider", "mountaintop", 3, 1000, 73, 80, 27, 34);//mountain with dungeon entrance/sword chest\\
         generateNPC("gnoll", "field", 3, 4500, 50,57, 15,31);
@@ -116,6 +118,7 @@ function initializeMap(){
 
 
     else if (localStorage.getItem("tileMapSector")==="dungeon_1"){
+        rainChance = 0;
         //MOBS
         generateNPC("spider", "dungeon", 25, 2500, 11, 89, 11, 89);
         generateNPC("rat", "cellar", 6, 2000, 31, 33, 63, 67);
@@ -133,6 +136,7 @@ function initializeMap(){
 
 
     else if (localStorage.getItem("tileMapSector")==="northsea"){
+        rainChance = 75;
         waterAccess = true;
         tile_map[65][87].objects.push(gameObjects['rockpile']);
         game_objects.push(new Sign(65, 86, "South to Old Haven"));
@@ -163,6 +167,7 @@ function initializeMap(){
     }
 
     else if (localStorage.getItem("tileMapSector")==="deepnorthsea"){
+      rainChance = 90;
       waterAccess=true;
       //mapExits
       for (let i=0;i<100;i++){//exit south
@@ -176,6 +181,7 @@ function initializeMap(){
     }
     
     else if (localStorage.getItem("tileMapSector")==="northsea_dungeon"){
+      rainChance = 0;
       //mobs
       generateNPC("mageLich", "dungeon", 8, 5000, 36,60, 61,85);
       //exits
@@ -183,20 +189,69 @@ function initializeMap(){
     }
 
     else if (localStorage.getItem("tileMapSector")==="deepnorthsea_2"){
+      rainChance = 100;
       waterAccess=true;
       //exits
       for (let i=0;i<100;i++){//exit south
         game_objects.push(new mapExit(i, 99, "deepnorthsea", "void", i, 0));
+      }
+      for (let i=0; i<100;i++){
+        game_objects.push(new mapExit(i,0, "deepnorthsea_3", "void", i,99));
       }
       game_objects.push(new mapExit(75,34, "lighthouse_1", "stairsR", 3,3));
       game_objects.push(new mapExit(73,33, "lighthouse_1", "dungeonStairs", 1,2));
     }
     
     else if (localStorage.getItem("tileMapSector")==="lighthouse_1"){
+      rainChance = 0;
       game_objects.push(new mapExit(1,2, "deepnorthsea_2", "stairsR", 73,33));
       game_objects.push(new mapExit(3,3, "deepnorthsea_2", "dungeonStairs", 75,34));
     }
-  //fix the dango boat
+    
+    else if (localStorage.getItem("tileMapSector")==="deepnorthsea_3"){
+      rainChance = 100;
+      waterAccess=true;
+      //exits
+      for (let i=0; i<100;i++){//south exit
+        game_objects.push(new mapExit(i,99, "deepnorthsea_2", "void", i,0));
+      }
+      for (let i=0; i<100;i++){//north exit
+        game_objects.push(new mapExit(i,0, "mainland_bay", "void", i,99));
+      }
+      //island trap heheh
+      game_objects.push(new mapExit(11,69, "deepnorthsea_oubliette", "dungeonStairs", 2,2));
+    }
+
+    else if (localStorage.getItem("tileMapSector")==="deepnorthsea_oubliette"){
+      rainChance = 0;
+      game_objects=[];
+      for (i=1;i<4;i++){
+        for (j=1;j<4;j++){
+          game_objects.push(new Spiketrap(i, j, 250, 10));
+        }
+      }
+    }
+
+    else if (localStorage.getItem("tileMapSector")==="mainland_bay"){
+      rainChance = 50;
+      waterAccess=true;
+      //exits
+      for (let i=0; i<100;i++){//south exit
+        game_objects.push(new mapExit(i,99, "deepnorthsea_3", "void", i,0));
+      }
+      //doors
+      let lockedDoors = [[53,17], [71,17], [76,11], [11,37]];
+      let openDoors = [[52,21], [58,21], [57,17], [62,15], [64,19], [71,21],  [75,15], [77,19], [82,21], [81,23], [85,26], [87,32], [85,34], [86,40], [89,42]];
+      let locked;
+      for (locked in lockedDoors){
+        game_objects.push(new Lockeddoor(lockedDoors[locked][0],lockedDoors[locked][1], "The townsfolk are going to be pissed!"));
+      }
+      let open;
+      for (open in openDoors){
+        game_objects.push(new Opendoor(openDoors[open][0],openDoors[open][1]));
+      }
+    }
+
   if (waterAccess){
     if (playerSailing){
       //player sailing, put boat at playerX/Y

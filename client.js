@@ -1,7 +1,8 @@
 "use strict";
 
 //see if can put this in build maps, would make more sense there
-let sectorList = ["main", "map_2", "northsea", "deepnorthsea", "deepnorthsea_2", "dungeon_1", "northsea_dungeon", "lighthouse_1", "createmap", "sub_map"];
+let sectorList = ["main", "map_2", "northsea", "deepnorthsea", "deepnorthsea_2" , "deepnorthsea_3", "dungeon_1", 
+                  "northsea_dungeon", "deepnorthsea_oubliette", "lighthouse_1", "createmap", "sub_map", "empty_map", "mainland_bay"];
 let tileMapSector = localStorage.getItem("tileMapSector");
 let script = document.getElementById("map_script");
 
@@ -60,11 +61,12 @@ function toggleDrops(){
 }
 
 var raining = false;
-function toggleRain(){//remove html button, figure out storm clouds and fade in
-  if (raining===true){
+function toggleRain(onoff){//remove html button, figure out storm clouds and fade in
+  if (!onoff){
     raining=false;
     playRain();
-  } else{
+  } 
+  else if (onoff){
     raining=true;
     playRain();
   }
@@ -214,30 +216,34 @@ function dropCoords(drop=true){
 }
 
 function drawXpDrop(){//instead add to an xp queue in update. originally skill, xp
-  if (dropList.length>0){
-    let drop;
-    for (drop in dropList){
-      //draw dropList[drop].text & amount at dropList[drop].coords[0], then shift list
-      if (dropList[drop].coords.length===0){
-        dropList.splice(drop, 1);
+try {
+    if (dropList.length>0){
+      let drop;
+      for (drop in dropList){
+        //draw dropList[drop].text & amount at dropList[drop].coords[0], then shift list
+        if (dropList[drop].coords.length===0){
+          dropList.splice(drop, 1);
+        }
+        if (dropList.length===0){
+          return;
+        }
+        let amount;
+        if (!dropList[drop].amount){
+          amount = " ";
+        } else {
+          amount = ` : ${dropList[drop].amount}`;
+        }
+        ctx.fillStyle="rgb(0,0,0,0.5)";
+        ctx.fillRect(dropList[drop].coords[0][0], dropList[drop].coords[0][1]-8, dropList[drop].text.length*5 + amount.length*5 ,10)
+        ctx.fillStyle="gold";
+        ctx.font="10px Arial";
+        ctx.fillText(dropList[drop].text + amount, dropList[drop].coords[0][0], dropList[drop].coords[0][1]);
+        dropList[drop].coords.shift();
       }
-      if (dropList.length===0){
-        return;
-      }
-      let amount;
-      if (!dropList[drop].amount){
-        amount = " ";
-      } else {
-        amount = ` : ${dropList[drop].amount}`;
-      }
-      ctx.fillStyle="rgb(0,0,0,0.5)";
-      ctx.fillRect(dropList[drop].coords[0][0], dropList[drop].coords[0][1]-8, dropList[drop].text.length*5 + amount.length*5 ,10)
-      ctx.fillStyle="gold";
-      ctx.font="10px Arial";
-      ctx.fillText(dropList[drop].text + amount, dropList[drop].coords[0][0], dropList[drop].coords[0][1]);
-      dropList[drop].coords.shift();
     }
-  }
+} catch (error) {
+  //haha!
+}
 }
 //////////////////////////////////////END B U G G E D XP DROPS//////////////////////////////////////////////////////////////////////
 
@@ -396,6 +402,7 @@ function drawSign(){
     //draw Sign
     let x = 40;
     let y = 40;
+    ctx.font = "10px Arial";
     ctx.fillStyle="rgba(139, 69, 19, 0.75)";
     ctx.fillRect(30, 30, 240,200);
     ctx.fillStyle="white";
@@ -494,11 +501,26 @@ function drawMap(disp_area){
             let npcid=tile_map[sprtX][sprtY]['objects'][object].id;
             if (isObjectInList(npcs, npcid)){
               let npcFacing=tile_map[sprtX][sprtY]['objects'][object].facing;
-              sprtLoc=tile_map[sprtX][sprtY]['objects'][object]['sprite'][npcFacing];
+              //let npcFacing = tile_map[sprtX][sprtY].objects[object].spriteData.facing;
+              sprtLoc=tile_map[sprtX][sprtY].objects[object].sprite[npcFacing];
               ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
                 col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
-              //then draw health? get npc by id, get health, draw at sprtLoc[0], sprtLoc[1], to sprtLoc[0]+16, sprtLoc[1]+5
-              //draw red line, then green line (health/max) * 16
+              //draw health
+              if (filterNpcById(npcs, npcid)[0].aggro===true){
+                let mobHp = filterNpcById(npcs, npcid)[0].hp;
+                let mobMax = filterNpcById(npcs, npcid)[0].maxHp;
+                ctx.fillStyle="red";
+                ctx.fillRect(col*BLOCKSIZE, row*BLOCKSIZE, 16, 2);
+                ctx.fillStyle="rgb(115, 252, 3, 1)";
+                ctx.fillRect(col*BLOCKSIZE, row*BLOCKSIZE, (mobHp/mobMax)*16, 2);
+              }
+              //draw hit splat
+              if (filterNpcById(npcs, npcid)[0].gotHit===true){
+                console.log("drawing hitsplat!");
+                filterNpcById(npcs, npcid)[0].gotHit=false;
+                ctx.drawImage(spriteSheet, baseTiles['hitsplat'][0],baseTiles['hitsplat'][1], 16,16,
+                  col*BLOCKSIZE, row*BLOCKSIZE, 16,16);
+              }
             } else {
               //remove the objectless sprite!
               delete tile_map[sprtX][sprtY]['objects'][object];
@@ -534,6 +556,38 @@ function drawMap(disp_area){
   if (tileMapSector==="dungeon_1"){//change to in list of dark places
     ctx.fillStyle = blackGradient;
     ctx.fillRect(0,0, canvas.width, canvas.height);
+  }
+}
+
+function drawProjectiles(disp_area){
+  //console.log("drawing projectiles");
+  var row;
+  for (row in disp_area){
+    //draw base sprite from that area of tile_map
+    var col;
+    for (col in disp_area[row]){
+      let sprtX=disp_area[row][col][0];
+      let sprtY=disp_area[row][col][1];
+      //console.log(sprtY + " " + sprtX);
+      try {
+        sprtLoc=gameObjects[tile_map[sprtX][sprtY]['sprite']['name']]['sprite']
+      } catch {
+        
+      }
+      try{
+        if (tile_map[sprtX][sprtY].projectiles){
+          let project;
+          let sprtLoc;
+          for (project in tile_map[sprtX][sprtY]['projectiles']){
+            sprtLoc=tile_map[sprtX][sprtY]['projectiles'][project]['sprite'];
+            ctx.drawImage(spriteSheet, sprtLoc[0],sprtLoc[1], 16,16,
+              col*BLOCKSIZE, row*BLOCKSIZE, DRAWSIZE,DRAWSIZE);
+          }
+        }
+      } catch(err){
+        //heheh
+      }
+    }
   }
 }
 
@@ -877,17 +931,19 @@ function Treasurechest2(x, y, item, scroll=null, popupText=null){//popup text te
 }
 
 //for stuff from mobs orrr.........
-function Lootbag(name, x, y, item){//could be solution for player dropping items?
+function Lootbag(_name, x, y, item){//could be solution for player dropping items?
                                    //ex) drop coin, lootbg with 1 coin spawns below player
                                    //drops over a lootbag go in existing lootbag
   //name is from what dropped it, determines what goes in bag (yet to be implemented)
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['lootbag']));
   this.spriteData.id = generateID();
-  game_object_ids.push(this.spriteData.id);//not necessary?
+  //game_object_ids.push(this.spriteData.id);//not necessary?
   this.x=x;
   this.y=y;
-  tile_map[playerX][playerY].objects.push(this.spriteData);
+  //tile_map[playerX][playerY].objects.push(this.spriteData);
+  tile_map[this.x][this.y].objects.push(this.spriteData);
   this.playerInteract=function(){
+    popMessage("Picked up some loot...");
     //put stuff in player inv and delete self
     if (player.inventory.find(obj => obj.name === item)){
       let invPos;
@@ -1065,7 +1121,7 @@ if (masterDebug && document.getElementById("placeButton")!==null && document.get
   document.getElementById('collisionButton').addEventListener('click', () => toggleCollision());
 }
 
-document.getElementById('rainButton').addEventListener('click', () => toggleRain());
+//document.getElementById('rainButton').addEventListener('click', () => toggleRain());
 document.getElementById('stuckButton').addEventListener('click', () => toggleStuck());
 document.getElementById('statDropButton').addEventListener('click', () => toggleDrops());
 
@@ -1227,8 +1283,30 @@ if (masterDebug && document.getElementById("download-button")!==null){
 
 
 //PROJECTILE for general use//////////////////////////////////////////////////////////////////////////
+//helper fxn
+function directionOffset(direction){
+  let x=0;
+  let y=0;
+  switch(direction){
+    case "up":
+      y-=1;
+      break;
+    case "down":
+      y+=1;
+      break;
+    case "left":
+      x-=1;
+      break;
+    case "right":
+      x+=1;
+  }
+  return {x:x, y:y}
+}
+
+let projectiles = [];
+let skipDraws = ["woodplate", "stoneplate"];
 let directionalProjectiles = ["arrow", "fireball"];//projectiles that direction matters (name+direction makes "arrowup")
-function Projectile(name, x, y, direction, distance, speed, damage, fromPlayer=false){
+function Projectile(name, x, y, direction, distance, speed, damage, fromPlayer=false, passive=false){
   this.x=x;
   this.y=y;
   this.direction=direction;
@@ -1236,32 +1314,44 @@ function Projectile(name, x, y, direction, distance, speed, damage, fromPlayer=f
   this.prevY = this.y;
   this.distance = distance;
   this.damage = damage;
+  //this.id=generateID();
   if (directionalProjectiles.includes(name)){
     this.spriteData = JSON.parse(JSON.stringify(gameObjects[name+direction]));
   } else {
     this.spriteData = JSON.parse(JSON.stringify(gameObjects[name]));
   }
+  this.spriteData.id=generateID();
   this.start=true;
   this.finished = false;
   this.projectileInterval = setInterval(() => {
-    try {
-      if (tile_map[this.prevX][this.prevY].projectiles!==undefined){
-        tile_map[this.prevX][this.prevY].projectiles=[]
+    //let proj;
+    let offset =directionOffset(this.direction);
+    try{
+      for (let proj in tile_map[this.x-offset.x][this.y-offset.y].projectiles){
+        if (tile_map[this.x-offset.x][this.y-offset.y].projectiles[proj].id===this.spriteData.id){
+          delete tile_map[this.x-offset.x][this.y-offset.y].projectiles[proj];
+        }
       }
     } catch(err){
-      //ha-HA!
+      //ha-HA
     }
     this.start=false;
     try {
       if (!tile_map[this.x][this.y].projectiles) {
+        //console.log("init projectile list error");
         tile_map[this.x][this.y]["projectiles"] = [];
       }
     } catch (err) {
       // handle the exception, or don't?
     }
-    if (this.finished){
+    if (this.finished || this.x>98 || this.y>98 || this.x<1 || this.y<1){
       try{
         tile_map[this.x][this.y].projectiles=[];
+        for (proj in tile_map[this.x][this.y].projectiles){
+          if (tile_map[this.x][this.y].projectiles[proj].id===this.id){
+            console.log("worked2!");
+          }
+        }
       } catch(err){
         //handle exception
       }
@@ -1277,12 +1367,30 @@ function Projectile(name, x, y, direction, distance, speed, damage, fromPlayer=f
       this.start==null;
       this.finished =null;
       this.projectileInterval=null;
+      //remove self from projectiles list
+      delete this;
       return;
     }
+    let skipDraw=false;
     try{
-      tile_map[this.x][this.y].projectiles.push(this.spriteData);
+      if (this.spriteData.name==="cloud"){
+        //check if woodplate or stoneplate 
+        for (let obj in tile_map[this.x][this.y].objects){
+          if (skipDraws.includes(tile_map[this.x][this.y].objects[obj].name)){
+            //console.log("went over plate")
+            skipDraw=true;
+          }
+        }
+        if (!skipDraw){
+          //console.log("drawing to tile");
+          tile_map[this.x][this.y].projectiles.push(this.spriteData);
+        }
+      } else {
+        tile_map[this.x][this.y].projectiles.push(this.spriteData);
+      }
     } catch(err){
       //pretty sure what's happening is it's trying to go off the map but this seems to fix it
+      console.log(err);
     }
     //increment x or y dpdn direction
     this.prevX=this.x;
@@ -1301,36 +1409,52 @@ function Projectile(name, x, y, direction, distance, speed, damage, fromPlayer=f
         this.x+=1;
     }
     //check collision, if fromPlayer, do not damage player if run into it for some reason
-    let proj_collision = projCollision(this.x, this.y);
-    switch(proj_collision){
-      case "player":
-        //hit player
-        if (!fromPlayer){
-          getAttacked(this.damage);
-          this.finished=true;
-        }
-        break;
-      case "npc":
-        //hit npc
-        if (!fromPlayer){return;};//for now npcs can't shoot each other
-        //get npc by id, npc.getAttacked(this.damage);
-        let npc;
-        for (npc in tile_map[this.x][this.y].objects){
-          if (tile_map[this.x][this.y].objects[npc].type==="npc"){
-            filterNpcById(npcs, tile_map[this.x][this.y].objects[npc].id)[0].getAttacked(damage);
-            incrementSkill("archery", 2);
+    if (!passive){
+      let proj_collision = projCollision(this.x, this.y);
+      switch(proj_collision){
+        case "player":
+          //hit player
+          if (!fromPlayer){
+            getAttacked(this.damage);
+            this.finished=true;
           }
+          break;
+        case "npc":
+          //hit npc
+          if (!fromPlayer){return;};//for now npcs can't shoot each other
+          //get npc by id, npc.getAttacked(this.damage);
+          let npc;
+          for (npc in tile_map[this.x][this.y].objects){
+            if (tile_map[this.x][this.y].objects[npc].type==="npc"){
+              filterNpcById(npcs, tile_map[this.x][this.y].objects[npc].id)[0].getAttacked(damage);
+              incrementSkill("archery", 2);
+            }
+          }
+          this.finished=true;
+          break;
+        case true:
+          //hit object or tile with collision
+          this.finished=true;
+          break;
+        case false:
+          break;
+      }
+      this.distance-=1;
+      if (this.distance===0){
+        this.finished = true;
+      }
+    } else {
+      if (!raining && this.spriteData.name==="cloud"){
+        if (this.x===playerX && this.y===playerY){
+          toggleRain(true);
+          player.lastCloud=Date.now();
         }
-        this.finished=true;
-        break;
-      case true:
-        //hit object or tile with collision
-        this.finished=true;
-        break;
-    }
-    this.distance-=1;
-    if (this.distance===0){
-      this.finished = true;
+      } 
+      else if (raining && this.spriteData.name==="cloud"){
+        if (this.x===playerX && this.y===playerY){
+          player.lastCloud=Date.now();
+        }
+      }
     }
   }, speed);
 }
@@ -1366,9 +1490,94 @@ function projCollision(x,y){//can prob use this for stuff other than projectiles
   }
 }
 
+function testWave(){
+  let i;
+  for (i=0;i<30;i++){
+    if (i<15){
+        new Projectile("whitewave", playerX-30+i, playerY-15+i, "right", 50, 100, 10, false);
+    } else {
+        new Projectile("whitewave", playerX-i, playerY-15+i, "right", 50, 100, 10, false);
+    }
+  }
+}
+
+function testStorm(){
+  let cloud = generateBlob();
+  let speed = Math.floor(Math.random()*300+200);
+  let dirs = ["up", "down", "left", "right"];
+  let dir = dirs[Math.floor(Math.random()*4)];
+  for (let coord in cloud){
+    projectiles.push(new Projectile("cloud", cloud[coord][0], cloud[coord][1], "right", 75, speed, 0, true, true));
+  }
+}
+
+let lastRain = Date.now();
+let rainChance = 0;
+function stormGenerator(){
+  if (lastRain+15000<Date.now()){
+    lastRain=Date.now();
+    let numClouds = Math.floor(Math.random()*Math.floor(rainChance/5));
+    for (let i=0;i<numClouds;i++){
+      testStorm();
+    }
+  }
+}
+
+//generates a crappy polygon, good enough
+function generateBlob() {
+  // Randomly generate the number of vertices for the polygon
+  const numVertices = Math.floor(Math.random() * 6) + 4; // Between 4 and 9 vertices
+
+  // Randomly generate the radius of the polygon
+  const radius = Math.floor(Math.random() * 10) + 10; // Between 10 and 19 pixels
+
+  // Randomly generate the starting point for the polygon
+  const startX = Math.floor(Math.random() * 100);
+  const startY = Math.floor(Math.random() * 100);
+  //let startX=20;
+  //let startY=20;
+
+  // Generate the vertices of the polygon
+  const vertices = [];
+  for (let i = 0; i < numVertices; i++) {
+    const angle = (2 * Math.PI / numVertices) * i;
+    const x = startX + radius * Math.cos(angle) + (Math.random() * radius * 0.5);
+    const y = startY + radius * Math.sin(angle) + (Math.random() * radius * 0.5);
+    vertices.push([Math.round(x), Math.round(y)]);
+  }
+
+  // Generate the coordinates for the filled-in polygon
+  const coordinates = [];
+  for (let y = 0; y < 100; y++) {
+    for (let x = 0; x < 100; x++) {
+      if (isPointInsidePolygon(x, y, vertices)) {
+        coordinates.push([x, y]);
+      }
+    }
+  }
+
+  // Return the array of (x, y) coordinates for the filled-in polygon
+  return coordinates;
+}
+
+// Helper function to check if a point is inside a polygon (used by generateBlob)
+function isPointInsidePolygon(x, y, vertices) {
+  let inside = false;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const xi = vertices[i][0], yi = vertices[i][1];
+    const xj = vertices[j][0], yj = vertices[j][1];
+
+    const intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+
 //set up ghost player///////////////////////////////////////////////////////////////////////////////
 function Player(){
   this.lastAttack = Date.now();
+  this.attSpeed = 1000;
   this.lastDirection = "right";
   this.lastTime = Date.now();
   this.lastMove = Date.now();
@@ -1376,6 +1585,7 @@ function Player(){
   this.gotHit = false;
   this.frozen = false;
   this.frozenTimeout = null;
+  this.lastCloud=Date.now();
   this.skills = {
     "walking":{"xp":0,"lvl":1},
     "strength":{"xp":0,"lvl":1},
@@ -1406,7 +1616,11 @@ function Player(){
     } else {
       this.regenTime = 5000;
     }
-    
+    if (this.lastCloud+1000<Date.now() && raining){
+      popMessage("The sun comes back out...");
+      toggleRain(false);
+    }
+
     if (this.lastInventory !== JSON.stringify(this.inventory)){
       this.lastInventory=JSON.stringify(this.inventory);
       saveInventoryToLocal();
@@ -1490,13 +1704,13 @@ function attack(target){
 }
 
 function getAttacked(damage){
-  playSound(hit_sound);
   let dodge = Math.floor(Math.random()*player.skills.defense.lvl);
   if (player.body.name!=="nothing"){
     dodge += Math.floor(Math.random()*player.body.itemObj.defBonus);
   }//and any other bonuses or handicaps
   damage-=dodge;
   if (damage > 0){
+    playSound(hit_sound);
     player.skills.health['health']-=damage;
     player.gotHit = true;//checked and turned off in drawPlayer
   } else {
@@ -1504,7 +1718,6 @@ function getAttacked(damage){
     popMessage("You dodge an attack!");
   }
   localStorage.setItem("playerStats", JSON.stringify(player.skills));
-  playSound(hit_sound);
 }
 
 function freeze(charObj, duration){
@@ -1752,8 +1965,9 @@ function interactNPC(nextX, nextY){
       var targetNPC=getNpcById(tile_map[nextX][nextY].objects);
       targetNPC=targetNPC[0].id;
       targetNPC=filterNpcById(npcs, targetNPC)[0];
-      if (targetNPC.spriteData.attackable===true){
+      if (targetNPC.spriteData.attackable===true && player.lastAttack+player.attSpeed < Date.now()){
         attack(targetNPC);//hmmm?
+        player.lastAttack = Date.now();
         //return? also should probably make interactObject not run so return false
       }
     }
@@ -2294,7 +2508,7 @@ function Leatherarmor(){
   this.defBonus=4;
   this.isHeld=false;
   this.onGround=false;
-  this.action = function(x, y){
+  this.action = function(_x, _y){
     //again don't need but might need for later
   }
 }
@@ -2306,7 +2520,7 @@ function Longbow(){
   this.attBonus = 0;
   this.isHeld = false;
   this.onGround = false;
-  this.action = function(x, y){//if player.holding.name==="longbow" || "oakbow" && has arrows, FIRE
+  this.action = function(_x, _y){//if player.holding.name==="longbow" || "oakbow" && has arrows, FIRE
     //no necessary action
     //bow_release.play();
   }
@@ -2319,7 +2533,7 @@ function Ironsword(){
   this.attBonus = 5;
   this.isHeld = false;
   this.onGround = false;
-  this.action = function(x, y){
+  this.action = function(_x, _y){
     //guess it doesn't really need action *yet*
     //sword_slash.play();
   }
@@ -2446,15 +2660,18 @@ function checkCollision(nextX, nextY, npc=false){
   if (!tile_map || reloading){
     return;
   }
-
-  //checkNextMap(nextX, nextY);
-
-  var object;
-  for (object in tile_map[nextX][nextY]['objects']){
-    if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
-      return true
+  
+  try {
+    var object;
+    for (object in tile_map[nextX][nextY]['objects']){
+      if (tile_map[nextX][nextY]['objects'][object]['collision']===true){
+        return true;
+      }
     }
+  } catch (error) {
+    //pfft
   }
+
   //always run the above, so objects in water can't be collided with!
   if (playerSailing && npc===false){//only runs for player
     let paths = footPathCheck(tile_map[nextX][nextY].objects, "name", "path", 4);
@@ -2470,12 +2687,9 @@ function checkCollision(nextX, nextY, npc=false){
       localStorage.setItem("raftLoc", JSON.stringify([playerRaft.x, playerRaft.y]));
       playerSailing = false;
       tile_map[playerX][playerY].objects.push(
-        //get Raft spriteData from game_objects
         getSpriteDataById(game_objects, raftID)
       );
       localStorage.setItem("raftLoc", JSON.stringify([playerRaft.x, playerRaft.y]));
-      //chance to break sail when disembarking
-      //need fxn removeFirstOfItem(name);
       if (Math.floor(Math.random()*player.skills.survival.lvl) < Math.floor(Math.random()*3)){
         //sail breaks, remove one from player inventory
         popMessage("You clipped the pier and broke your sail!");
@@ -2488,20 +2702,24 @@ function checkCollision(nextX, nextY, npc=false){
     }
   }
   //sailing should skip the following:
-  if (tile_map[nextX][nextY]['sprite']['collision']===true){
-    let collide_override=false;
-    for (object in tile_map[nextX][nextY]['objects']){
-      if (tile_map[nextX][nextY]['objects'][object].hasOwnProperty("coll_override")===true){
-        if (tile_map[nextX][nextY]['objects'][object]['coll_override']===true){
-          collide_override = true;
+  try {
+    if (tile_map[nextX][nextY]['sprite']['collision']===true){
+      let collide_override=false;
+      for (object in tile_map[nextX][nextY]['objects']){
+        if (tile_map[nextX][nextY]['objects'][object].hasOwnProperty("coll_override")===true){
+          if (tile_map[nextX][nextY]['objects'][object]['coll_override']===true){
+            collide_override = true;
+          }
         }
       }
+      if (collide_override===true){
+        return false;
+      } else{
+        return true;
+      }
     }
-    if (collide_override===true){
-      return false;
-    } else{
-      return true;
-    }
+  } catch (error) {
+    //omfg
   } 
 }
 
@@ -2622,6 +2840,32 @@ function weightedRandomSelection(itemList, playerLevel) {
   }
 }
 
+function getDirection(mobFacing, mobDirection, prevX, prevY, newX, newY){
+  if (prevX !== newX){
+    if (prevX < newX){
+      mobDirection="left";
+      mobFacing="left";
+      return {"dir":mobDirection, "face":mobFacing};
+    }
+    else if (prevX > newX){
+      mobDirection="right";
+      mobFacing="right";
+      return {"dir":mobDirection, "face":mobFacing};
+    }
+  } 
+  if (prevY !== newY){
+    if (prevY < newY){
+      mobDirection="down";
+      return {"dir":mobDirection, "face":mobFacing};
+    }
+    else if (prevY > newY){
+      mobDirection="up";
+      return {"dir":mobDirection, "face":mobFacing};
+    }
+  }
+  return {"dir":mobDirection, "face":mobFacing};//hmmm
+}
+
 function popMessage(message){
   dropList.push({
     "text":message,
@@ -2636,12 +2880,12 @@ function popMessage(message){
 //passive npc setup testing///////////////////////////////////////////////////////////////////////////////////////////
 var move_dir=["up","down","left","right"];
 
-function moveNPC(curX,curY, definite=false){//for passive (non-aggressive/tracking) movement
+function moveNPC(curX,curY, nextX, nextY){//for passive (non-aggressive/tracking) movement
   //calculate random move, return x,y
-  let potentialX=null;
-  let potentialY=null;
   let facing="right";
   let moveDir;
+  //facing determined by moveDir determined by curX/Y and nextX/Y
+  /*
   if (!definite){
     moveDir = move_dir[Math.floor(Math.random() * 4)];
     if (moveDir==='up'){potentialX=curX-1;potentialY=curY;};
@@ -2659,11 +2903,12 @@ function moveNPC(curX,curY, definite=false){//for passive (non-aggressive/tracki
     potentialX=curX;
     potentialY=curY;
   }
+  */
   //check potential tile for collision
-  let collision = checkCollision(potentialX, potentialY, true);
+  let collision = checkCollision(nextX, nextY, true);
   if (collision){return [curX, curY, facing]}
   else {
-    return [potentialX, potentialY, facing];
+    return [nextX, nextY, facing];
   }
 }
 
@@ -2715,7 +2960,7 @@ var npcs=[];//npc's in game, {"[id]":npc_object}
   //talk to npc to unlock quest, new Quest with parameters
   //upon quest completion npc greeting changes
   //in case of Klin shopkeep, unlocks trade and player given reward
-function Shopkeep(x, y, name, greeting, selling={}){//maybe these kind of npcs don't go in npcs list?
+function Shopkeep(x, y, _name, greeting, selling={}){//maybe these kind of npcs don't go in npcs list?
                                         //{"item":{"amt":5, "price":5}}
   this.spriteData = JSON.parse(JSON.stringify(gameObjects['shopkeep']));
   this.spriteData.id=generateID();
@@ -2733,7 +2978,7 @@ function Shopkeep(x, y, name, greeting, selling={}){//maybe these kind of npcs d
 }
 
 let showShop = false;
-function shopPopup(text, items){//text either manual or comes from Shopkeep properties
+function shopPopup(_text, _items){//text either manual or comes from Shopkeep properties
   //Sign-like popup displays item icons and their amt/prices
   //player clicks to buy, subtract coins, add item
   //detects if player has walked away
@@ -2751,21 +2996,35 @@ function Spider(){
   this.name="spider";
   this.domain = null;//generated in generator(gee ya think?)
   this.hp = 50;
+  this.maxHp=50;
   this.strength = 5;
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['spider']));
   this.spriteData.id=null;
   this.x=null;
   this.y=null;
   this.lastTime=Date.now();//timestamp
-  this.delay = 1000;
+  this.delay = 700;
   this.aggro = false;
   this.lastAggro=Date.now();
   this.aggroRange = 8;
+  this.gotHit = false;
   this.reposition = false;
   this.reposCount = 0;
-  //this.drops = ["string", "brasskey"]
-  
+  this.walkingPath = [];
+  this.moving=false;
+  this.playerLastPos = {x:null, y:null};
+  this.direction = "right";
+  this.lastCoords = [this.x, this.y]
+  this.lastMove = Date.now();
   this.update = function(){
+    if (this.lastMove+5000 < Date.now()){
+      if (this.lastCoords[0]===this.x && this.lastCoords[1]===this.y){
+        //mbo probably stuck or something
+        this.moving=false;
+        this.walkingPath=[];
+        this.lastMove = Date.now();
+      }
+    }
    //check if npc dead
     if (this.hp<1){
       incrementSkill("strength", 2);
@@ -2777,7 +3036,10 @@ function Spider(){
       } else {
         loot = "string"
       }
-      game_objects.push(new Lootbag("spider", this.x, this.y, loot));
+      setTimeout(() => {
+        game_objects.push(new Lootbag("spider", this.x, this.y, loot));
+      },200);
+      
       removeNPC(this.spriteData.id, this.x, this.y);
     }
     let now = Date.now();
@@ -2788,145 +3050,159 @@ function Spider(){
       if (distToPlayer(this.x, this.y)<=5){
         this.aggro=true;
         this.lastAggro=Date.now();
+        this.playerLastPos.x=playerX;
+        this.playerLastPos.y=playerY;
       } else {
         if (this.aggro===true && Date.now()>this.lastAggro+3000){
           this.aggro=false;
         }
       }
-      var newCoords=null;
-      if (!this.aggro){
-        newCoords=moveNPC(this.x,this.y);//returns x,y
-      } else {
-        var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
-        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
-        if (checkCollision(newCoords[0], newCoords[1], true)===true){
-          newCoords=[this.x, this.y, "right"];
-        }
-        if (newCoords[0]===playerX && newCoords[1]===playerY){
-          newCoords=[this.x, this.y, "right"];
-          getAttacked(this.strength);
-          //chance to freeze player (player.freeze, add web sprite with timeout)
-          //that way other mobs that freeze can have their own type of freeze
-          if (Math.floor(Math.random() * 100) > 90){
-            freeze(player, 1500);
-            //draw web whether frozen or not just cause it's cool
-            //same fashion as bobber
-            tile_map[playerX][playerY].objects.push(gameObjects['web']);
-            let timeoutX = playerX;
-            let timeoutY = playerY;
-            setTimeout(() => {
-              tile_map[timeoutX][timeoutY].objects = filterObjByKeyVal(tile_map[timeoutX][timeoutY].objects, "name", "web");
-            },3000);
-          }
+
+      if (this.aggro===true && !this.moving){
+        this.walkingPath=findPath(this.x, this.y, playerX, playerY);
+        //console.log(this.walkingPath);
+        this.moving=true;
+      }
+      else if (this.aggro===false && !this.moving){
+        //I don't think this is even doing anything?
+        let randTile = getRandomValidTile(this.x, this.y);
+        this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+        this.moving=true;
+        /*
+        let randX;
+        let randY;
+        randX = Math.floor(Math.random()*10+this.x);
+        randY = Math.floor(Math.random()*10+this.y);
+        this.walkingPath = findPath(this.x, this.y, randX, randY);
+        this.moving=true;
+        */
+      }
+
+      let newCoords = [this.x, this.y, "right"];
+      if (this.moving===true){
+        if (this.walkingPath.length>0){
+          if (this.aggro===true){
+            if (this.walkingPath[0][0]===playerX && this.walkingPath[0][1]===playerY){
+              getAttacked(this.strength);
+              this.webPlayer();
+              this.walkingPath=[];
+              this.moving=false;
+            } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.walkingPath.shift();
+            }
+          } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.walkingPath.shift();
+              if (this.walkingPath.length===0){
+                this.moving=false;
+
+              }
+            }
+        } else {
+            if (this.aggro===true){
+              this.walkingPath = findPath(this.x, this.y, playerX, playerY);
+            } else {
+              let randTile = getRandomValidTile(this.x, this.y);
+              this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+              this.moving=true;
+            }
         }
       }
-      //remove self from current tile
-      if (newCoords[2]!==null){
-        this.spriteData.facing=newCoords[2];
-      }
+
+      //remove from old tile, put back on new tile
       tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
       this.x=newCoords[0];
       this.y=newCoords[1];
-      //add self to new tile
+      this.facing=newCoords[2];
       tile_map[this.x][this.y].objects.push(this.spriteData)
+
+
+      if (this.aggro===true){ 
+        if (this.playerLastPos.x!==playerX || this.playerLastPos.y!==playerY){
+          this.moving=false;
+          this.walkingPath=[];
+        }
+      }
+    }
+    if (!this.started){
+      this.started=true;
+      this.moving=false;
+      this.walkingPath=[];
+    }
+    if (this.walkingPath.length===0){
+      this.moving=false;
     }
   }
   
   this.getAttacked = function(damage){
     playSound(hit_sound);
-    this.hp-=damage;
+    if (damage > 0){
+      this.hp-=damage;
+      this.gotHit=true;
+    }
+    
+  }
+  this.webPlayer = function(){
+    if (Math.floor(Math.random() * 100) > 90){
+      freeze(player, 1500);
+      tile_map[playerX][playerY].objects.push(gameObjects['web']);
+      let timeoutX = playerX;
+      let timeoutY = playerY;
+      setTimeout(() => {
+        tile_map[timeoutX][timeoutY].objects = filterObjByKeyVal(tile_map[timeoutX][timeoutY].objects, "name", "web");
+      },3000);
+    }
   }
 }
 
 function Rat(){
-  this.name="rat";
   this.hp = 30;//lel just testing
-  this.strength = 5;
+  this.maxHp=30;
   this.spriteData=JSON.parse(JSON.stringify(gameObjects['rat']));
   this.spriteData.id=null;
   this.x=null;
   this.y=null;
   this.domain = null;
   this.lastTime=Date.now();//timestamp
-  this.delay = 2000;
+  this.strength = 5;
+  this.delay = 1000;
   this.aggro = false;
   this.lastAggro=Date.now();
-  this.strength = 2;
+  this.gotHit = false;
+  this.playerLastPos = {x:null, y:null};
+  this.walkingPath = [];//list of coords. walk them until empty or player moves (for now)
+  this.trackingToPlayer=false;
+  this.trackToOrigin=false;
+  this.trackToRandom=false;
+  this.moving=false;
+  this.started=false;//to fix not moving until aggroed then unaggroed (not sure lol)
+  this.lastCoords = [this.x, this.y]
+  this.lastMove = Date.now();
   this.update = function(){
-    if (this.hp<1){
-      game_objects.push(new Lootbag("rat", this.x, this.y, "hide"));
-      incrementSkill("strength", 5);
-      incrementSkill("health", 3);
-      playSound(skele_die_sound);
-      removeNPC(this.spriteData.id, this.x, this.y);
+    if (this.lastMove+5000 < Date.now()){
+      if (this.lastCoords[0]===this.x && this.lastCoords[1]===this.y){
+        //mbo probably stuck or something
+        this.moving=false;
+        this.walkingPath=[];
+        this.lastMove = Date.now();
+      }
     }
-    let now = Date.now();
-    let restTime = Math.floor(Math.random()*this.delay);
-    if (now > this.lastTime+restTime){
-      this.lastTime=now;
-      //check distance to player
-      if (distToPlayer(this.x, this.y)<=5){
-        this.aggro=true;
-        this.lastAggro=Date.now();
-      } else {
-        if (this.aggro===true && Date.now()>this.lastAggro+3000){
-          this.aggro=false;
-        }
-      }
-      var newCoords=null;
-      if (!this.aggro){
-        newCoords=moveNPC(this.x,this.y);//returns x,y
-      } else {
-        var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
-        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
-        if (checkCollision(newCoords[0], newCoords[1], true)===true){
-          newCoords=[this.x, this.y, "right"];
-        }
-        if (newCoords[0]===playerX && newCoords[1]===playerY){
-          newCoords=[this.x, this.y, "right"];
-          getAttacked(this.strength);
-        }
-      }
-      //remove self from current tile
-      if (newCoords[2]!==null){
-        this.spriteData.facing=newCoords[2];
-      }
-      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
-      this.x=newCoords[0];
-      this.y=newCoords[1];
-      //add self to new tile
-      tile_map[this.x][this.y].objects.push(this.spriteData)
-    }
-  }
-  this.getAttacked = function(damage){
-    //receive attack from player
-    playSound(hit_sound);
-    this.hp-=damage;
-  }
-}
-
-function Skeleton(){
-  this.name="skeleton";//its in spriteData but had to do it this way for some reason
-  this.hp = 25;//lel just testing
-  this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
-  this.spriteData.id=null;
-  this.x=null;
-  this.y=null;
-  this.domain = null;
-  this.lastTime=Date.now();//timestamp
-  this.strength = 5;
-  this.delay = 2000;
-  this.aggro = false;
-  this.lastAggro=Date.now();
-  this.strength = 5;
-
-  this.update = function(){
     if (this.hp<1){
-      if (Math.floor(Math.random()*100 > 90)){
-        game_objects.push(new Lootbag("skeleton", this.x, this.y, "key"));
-      } else {
-        game_objects.push(new Lootbag("skeleton", this.x, this.y, "coin"));
-      }
+      setTimeout(() => {
+        if (Math.floor(Math.random()*100 > 90)){
+          game_objects.push(new Lootbag("skeleton", this.x, this.y, "key"));
+        } else {
+          game_objects.push(new Lootbag("skeleton", this.x, this.y, "coin"));
+        }
+      }, 500);
+
       incrementSkill("strength", 2);
       incrementSkill("health", 7);
       playSound(skele_die_sound);
@@ -2940,48 +3216,306 @@ function Skeleton(){
       if (distToPlayer(this.x, this.y)<=5){
         this.aggro=true;
         this.lastAggro=Date.now();
+        this.playerLastPos.x=playerX;
+        this.playerLastPos.y=playerY;
       } else {
         if (this.aggro===true && Date.now()>this.lastAggro+3000){
           this.aggro=false;
         }
       }
-      var newCoords=null;
-      if (!this.aggro){
-        newCoords=moveNPC(this.x,this.y);//returns x,y
-      } else {
-        var trackCoords = trackPlayer(this.x, this.y);//this is broken lol
-        newCoords=moveNPC(trackCoords.x, trackCoords.y, true);
-        if (checkCollision(newCoords[0], newCoords[1], true)===true){
-          newCoords=[this.x, this.y, "right"];
-        }
-        if (newCoords[0]===playerX && newCoords[1]===playerY){
-          newCoords=[this.x, this.y, "right"];
-          getAttacked(this.strength);
+
+      if (this.aggro===true && !this.moving){
+        this.walkingPath=findPath(this.x, this.y, playerX, playerY);
+        //console.log(this.walkingPath);
+        this.moving=true;
+      }
+      else if (this.aggro===false && !this.moving){
+        let randTile = getRandomValidTile(this.x, this.y);
+        this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+        this.moving=true;
+        /*
+        let randX;
+        let randY;
+        randX = Math.floor(Math.random()*10+this.x);
+        randY = Math.floor(Math.random()*10+this.y);
+        this.walkingPath = findPath(this.x, this.y, randX, randY);
+        this.moving=true;
+        */
+      } 
+
+      let newCoords = [this.x, this.y, "right"];
+      if (this.moving===true){
+        if (this.walkingPath.length>0){
+          if (this.aggro===true){
+            if (this.walkingPath[0][0]===playerX && this.walkingPath[0][1]===playerY){
+              getAttacked(this.strength);
+              this.walkingPath=[];
+              this.moving=false;
+            } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.lastCoords = [this.x, this.y];
+              this.walkingPath.shift();
+            }
+          } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.lastCoords = [this.x, this.y];
+              this.walkingPath.shift();
+              if (this.walkingPath.length===0){
+                this.moving=false;
+
+              }
+            }
+        } else {
+            if (this.aggro===true){
+              this.walkingPath = findPath(this.x, this.y, playerX, playerY);
+            } else {
+              let randTile = getRandomValidTile(this.x, this.y);
+              this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+              this.moving=true;
+            }
         }
       }
-      //remove self from current tile
-      if (newCoords[2]!==null){
-        this.spriteData.facing=newCoords[2];
-      }
+
+      //remove from old tile, put back on new tile
       tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
       this.x=newCoords[0];
       this.y=newCoords[1];
-      //add self to new tile
+      this.facing=newCoords[2];
       tile_map[this.x][this.y].objects.push(this.spriteData)
+
+
+      if (this.aggro===true){ 
+        if (this.playerLastPos.x!==playerX || this.playerLastPos.y!==playerY){
+          this.moving=false;
+          this.walkingPath=[];
+        }
+      }
+    }
+    if (!this.started){
+      this.started=true;
+      this.moving=false;
+      this.walkingPath=[];
+    }
+    if (this.walkingPath.length===0){
+      this.moving=false;
     }
   }
   this.getAttacked = function(damage){
     //receive attack from player
     playSound(hit_sound);
     this.hp-=damage;
+    this.gotHit=true;
+  }
+}
+//spriteData derived from name
+//name, hp, delay, strength, xp, 
+function Skeleton(){
+  this.name="skeleton";//its in spriteData but had to do it this way for some reason
+  this.hp = 25;//lel just testing
+  this.maxHp=25;
+  this.spriteData=JSON.parse(JSON.stringify(gameObjects['skeleton']));
+  this.spriteData.id=null;
+  this.x=null;
+  this.y=null;
+  this.domain = null;
+  this.lastTime=Date.now();//timestamp
+  this.strength = 5;
+  this.delay = 1000;
+  this.aggro = false;
+  this.lastAggro=Date.now();
+  this.gotHit = false;
+  this.playerLastPos = {x:null, y:null};
+  this.walkingPath = [];//list of coords. walk them until empty or player moves (for now)
+  this.trackingToPlayer=false;
+  this.trackToOrigin=false;
+  this.trackToRandom=false;
+  this.moving=false;
+  this.started=false;//to fix not moving until aggroed then unaggroed (not sure lol)
+  this.lastCoords = [this.x, this.y]
+  this.lastMove = Date.now();
+  this.update = function(){
+    if (this.lastMove+5000 < Date.now()){
+      if (this.lastCoords[0]===this.x && this.lastCoords[1]===this.y){
+        //mbo probably stuck or something
+        this.moving=false;
+        this.walkingPath=[];
+        this.lastMove = Date.now();
+      }
+    }
+    if (this.hp<1){
+      setTimeout(() => {
+        if (Math.floor(Math.random()*100 > 90)){
+          game_objects.push(new Lootbag("skeleton", this.x, this.y, "key"));
+        } else {
+          game_objects.push(new Lootbag("skeleton", this.x, this.y, "coin"));
+        }
+      }, 500);
+
+      incrementSkill("strength", 2);
+      incrementSkill("health", 7);
+      playSound(skele_die_sound);
+      removeNPC(this.spriteData.id, this.x, this.y);
+    }
+    let now = Date.now();
+    let restTime = Math.floor(Math.random()*this.delay);
+    if (now > this.lastTime+restTime){
+      this.lastTime=now;
+      //check distance to player
+      if (distToPlayer(this.x, this.y)<=5){
+        this.aggro=true;
+        this.lastAggro=Date.now();
+        this.playerLastPos.x=playerX;
+        this.playerLastPos.y=playerY;
+      } else {
+        if (this.aggro===true && Date.now()>this.lastAggro+3000){
+          this.aggro=false;
+        }
+      }
+
+      if (this.aggro===true && !this.moving){
+        this.walkingPath=findPath(this.x, this.y, playerX, playerY);
+        //console.log(this.walkingPath);
+        this.moving=true;
+      }
+      else if (this.aggro===false && !this.moving){
+        let randTile = getRandomValidTile(this.x, this.y);
+        this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+        this.moving=true;
+        /*
+        let randX;
+        let randY;
+        randX = Math.floor(Math.random()*10+this.x);
+        randY = Math.floor(Math.random()*10+this.y);
+        this.walkingPath = findPath(this.x, this.y, randX, randY);
+        this.moving=true;
+        */
+      } 
+
+      let newCoords = [this.x, this.y, "right"];
+      if (this.moving===true){
+        if (this.walkingPath.length>0){
+          if (this.aggro===true){
+            if (this.walkingPath[0][0]===playerX && this.walkingPath[0][1]===playerY){
+              getAttacked(this.strength);
+              this.walkingPath=[];
+              this.moving=false;
+            } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.lastCoords = [this.x, this.y];
+              this.walkingPath.shift();
+            }
+          } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.lastCoords = [this.x, this.y];
+              this.walkingPath.shift();
+              if (this.walkingPath.length===0){
+                this.moving=false;
+
+              }
+            }
+        } else {
+            if (this.aggro===true){
+              this.walkingPath = findPath(this.x, this.y, playerX, playerY);
+            } else {
+              let randTile = getRandomValidTile(this.x, this.y);
+              this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+              this.moving=true;
+            }
+        }
+      }
+
+      //remove from old tile, put back on new tile
+      tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
+      this.x=newCoords[0];
+      this.y=newCoords[1];
+      this.facing=newCoords[2];
+      tile_map[this.x][this.y].objects.push(this.spriteData)
+
+
+      if (this.aggro===true){ 
+        if (this.playerLastPos.x!==playerX || this.playerLastPos.y!==playerY){
+          this.moving=false;
+          this.walkingPath=[];
+        }
+      }
+    }
+    if (!this.started){
+      this.started=true;
+      this.moving=false;
+      this.walkingPath=[];
+    }
+    if (this.walkingPath.length===0){
+      this.moving=false;
+    }
+  }
+  this.getAttacked = function(damage){
+    //receive attack from player
+    playSound(hit_sound);
+    this.hp-=damage;
+    this.gotHit=true;
   }
 }
 
+function getRandomValidTile(mobX, mobY){
+  let validTiles = [];
+  let potentialTiles = getPathArea(mobX, mobY);
+  for (let x in potentialTiles){
+    for (let y in potentialTiles[x]){
+      let xCoord = potentialTiles[x][y][0];
+      let yCoord = potentialTiles[x][y][1]; 
+      if (tile_map[xCoord][yCoord].sprite.collision===true){
+        continue;
+      }
+      let coll = false;
+      let obj;
+      for (obj in tile_map[xCoord][yCoord].objects){
+        if (tile_map[xCoord][yCoord].objects[obj].collision===true){
+          coll = true;
+          break;
+        }
+      }
+      if (coll===false){
+        validTiles.push(potentialTiles[x][y]);
+      }
+    }
+  }
+  //let changeChance = [1,2][Math.floor(Math.random()*2)];
+  /*
+  let randTile = validTiles[Math.floor(Math.random()*validTiles.length)];
+  if (Math.random()*10 > 0){
+    randTile = validTiles[0];
+    //console.log(`default to 0: ${validTiles[0]}`)
+  }
+  randTile=validTiles[0];
+  */
+  let randTile;
+  try{
+    randTile = getValidSpawnCoord(mobX-10, mobY-10, mobX+10, mobY+10);
+    randTile = [randTile.y, randTile.x];
+  } catch(err){
+    randTile=[mobX, mobY];
+  }
+  return randTile;
+}
+
 //too many parameters... how to better do this?
-function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMoves, retreatDelay) {
-   //console.log(`${name}, ${projType}, ${projSpeed}, ${projDist}, ${hp}, ${str}, ${delay}, ${retreatMoves}, ${retreatDelay}`)
+function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMoves, retreatDelay, xp) {
+                  //this should be like a list or dict so the mob is just a data set and gets put as the arg
     this.name = name; //its in spriteData but had to do it this way for some reason
     this.hp = hp; //lel just testing
+    this.maxHp = hp;
     this.str = str;
     this.spriteData = JSON.parse(JSON.stringify(gameObjects[this.name]));
     this.spriteData.id = null;
@@ -3002,6 +3536,10 @@ function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMo
     this.retreating = false;
     this.retreatCount = retreatMoves;
     this.retreatDelay = retreatDelay;
+    this.moving=false;
+    this.started=false;
+    this.walkingPath=[];
+    this.lastShot=Date.now();
     this.update = function () {
       if (this.hp < 1) {
         if (Math.floor(Math.random() * 100 > 90)) {
@@ -3009,8 +3547,8 @@ function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMo
         } else {
           game_objects.push(new Lootbag(name, this.x, this.y, "coin"));
         }
-        incrementSkill("strength", 4); //what if something else kills it though?
-        incrementSkill("health", 4);
+        incrementSkill("strength", xp.strengthXp); //what if something else kills it though?
+        incrementSkill("health", xp.healthXp);
         playSound(skele_die_sound);
         removeNPC(this.spriteData.id, this.x, this.y);
       }
@@ -3058,8 +3596,11 @@ function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMo
             }
           }
           if (shoot){
-            new Projectile(projType, this.x, this.y, shootDirection, this.projDist, this.projSpeed, this.strength);
-            shoot=false;
+            if (this.lastShot+1250<Date.now()){
+              new Projectile(projType, this.x, this.y, shootDirection, this.projDist, this.projSpeed, this.strength, false);
+              this.lastShot=Date.now();
+            }
+            shoot = false;
           }
           this.aggro = true;
           this.lastAggro = Date.now();
@@ -3069,31 +3610,76 @@ function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMo
             this.aggro = false;
           }
         }
-        var newCoords = null;
-        if (!this.retreating) {
-          if (!this.aggro) {
-            newCoords = moveNPC(this.x, this.y); //returns x,y
-          } else {
-            var trackCoords = trackPlayer(this.x, this.y); //this is broken lol
-            newCoords = moveNPC(trackCoords.x, trackCoords.y, true);
-            if (checkCollision(newCoords[0], newCoords[1], true) === true) {
-              newCoords = [this.x, this.y, "right"];
-            }
-            if (newCoords[0] === playerX && newCoords[1] === playerY) {
-              newCoords = [this.x, this.y, "right"];
+        if (this.aggro===true && !this.moving){
+          this.walkingPath=findPath(this.x, this.y, playerX, playerY);
+          //console.log(this.walkingPath);
+          this.moving=true;
+        }
+        else if (this.aggro===false && !this.moving){
+          let randTile = getRandomValidTile(this.x, this.y);
+          this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+          this.moving=true;
+          /*
+          let randX;
+          let randY;
+          randX = Math.floor(Math.random()*10+this.x);
+          randY = Math.floor(Math.random()*10+this.y);
+          this.walkingPath = findPath(this.x, this.y, randX, randY);
+          this.moving=true;
+          */
+        }
+        //new move stuffs
+
+        
+      if (this.aggro===true && !this.moving){
+        this.walkingPath=findPath(this.x, this.y, playerX, playerY);
+        //console.log(this.walkingPath);
+        this.moving=true;
+      }
+      else if (this.aggro===false && !this.moving){
+        let randTile = getRandomValidTile(this.x, this.y);
+        this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+        this.moving=true;
+      }
+      let newCoords = [this.x, this.y, "right"];
+      if (this.moving===true){
+        if (this.walkingPath.length>0){
+          if (this.aggro===true){
+            if (this.walkingPath[0][0]===playerX && this.walkingPath[0][1]===playerY){
               getAttacked(this.strength);
+              this.walkingPath=[];
+              this.moving=false;
+            } else {
+              let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              //facingDirection.dir/.face
+              //console.log(facingDirection);
+              this.spriteData.facing = facingDirection["face"];
+              this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+              newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+              this.walkingPath.shift();
             }
+          } else {
+            let facingDirection = getDirection(this.spriteData.facing, this.direction, this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+            //facingDirection.dir/.face
+            //console.log(facingDirection);
+            this.spriteData.facing = facingDirection["face"];
+            this.direction = facingDirection["dir"];//figure out why it wouldn't change by passing to getDirection?
+            newCoords = moveNPC(this.x, this.y, this.walkingPath[0][0], this.walkingPath[0][1]);
+            this.walkingPath.shift();
           }
         } else {
-          //retreat!
-          newCoords = moveNPC(this.x, this.y); //random for now
-          this.retreatCount += 1;
-          if (this.retreatCount >= 5) {
-            this.retreating = false;
-            this.retreatCount = 0;
-            this.delay = this.retreatDelay;
+          if (this.aggro===true){
+            this.walkingPath = findPath(this.x, this.y, playerX, playerY);
+          } else {
+            if (this.walkingPath.length===0){
+              let randTile = getRandomValidTile(this.x, this.y);
+              this.walkingPath = findPath(this.x, this.y, randTile[0], randTile[1]);
+              this.moving=true;
+            }
           }
         }
+      }
+
         //remove self from current tile
         tile_map[this.x][this.y].objects = filterObjById(tile_map[this.x][this.y].objects, this.spriteData.id);
         this.x = newCoords[0];
@@ -3101,7 +3687,15 @@ function Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMo
         //add self to new tile
         tile_map[this.x][this.y].objects.push(this.spriteData);
       }
-    };
+      if (!this.started){
+        this.started=true;
+        this.moving=false;
+        this.walkingPath=[];
+      }
+      if (this.walkingPath.length===0){
+        this.moving=false;
+      }
+    }
     this.getAttacked = function (damage) {
       //receive attack from player
       playSound(hit_sound);
@@ -3119,9 +3713,9 @@ var game_ids=[0];//if id in list, regenerate, if id not in list add it, remove i
 // Rangemob(name, projType, projSpeed, projDist, hp, str, delay, retreatMoves, retreatDelay)
 
 let complexMobInfo = {
-  "gnoll":["gnoll", "pebble", 100, 8, 100, 8, 2000, 5, 500],
-  "rangeGoblin":["rangeGoblin", "arrow", 100, 10, 150, 20, 1000, 10, 200],
-  "mageLich":["mageLich", "fireball", 100, 12, 300, 35, 1000, 8, 200]
+  "gnoll":["gnoll", "pebble", 100, 8, 100, 8, 2000, 5, 500, {strengthXp:5, healthXp:10}],
+  "rangeGoblin":["rangeGoblin", "arrow", 100, 10, 150, 20, 1000, 10, 200, {strengthXp:10, healthXp:15}],
+  "mageLich":["mageLich", "fireball", 100, 12, 300, 35, 1000, 8, 200, {strengthXp:20, healthXp:20}]
 }
 
 const generatorList = {
@@ -3181,7 +3775,8 @@ function generateNPC(name, domain, amt, interval, xMin, xMax, yMin, yMax){
           complexMobInfo[name][5], 
           complexMobInfo[name][6], 
           complexMobInfo[name][7], 
-          complexMobInfo[name][8]
+          complexMobInfo[name][8],
+          complexMobInfo[name][9]
         );
       }
       newNPC.x = randCoords.x;
@@ -3223,15 +3818,18 @@ function update(){
   //game logic here
   if (!death){
     ctx.clearRect(0,0,300,300);
+    stormGenerator();//produces storm clouds every 15 seconds
     updateNPCs();
     player.update();
     if (!bigMap){
       let disp_area=getDispArea();
       drawMap(disp_area);
       drawPlayer();
+      drawProjectiles(disp_area);
     } else {
       let disp_area=drawBigMap();
       drawMap(disp_area);
+      drawProjectiles(disp_area);
     }
     //drawRainFade();
     drawStats();

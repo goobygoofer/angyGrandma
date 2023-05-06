@@ -61,7 +61,7 @@ baseTiles = {//redo entirely and in order
     "redX":[288,751],//this one was weird
     "redDownArrow":[96,640],
     "glasspane1":[160,560],
-    "cloud":[240,736],
+    "cloud":[240,1264],
     "axeR":[0,192],
     "axeL":[272,192],
     "axeItem":[64,64],
@@ -126,6 +126,7 @@ baseTiles = {//redo entirely and in order
     "spikein":[0,864],
     "spikeout":[0,848],
     "stairsR":[32,352],
+    "hitsplat":[256,1264],
     //projectiles -- all these have up down left right, bit bulky but makes easier in Projectile fxn
     "arrowup":[208,240],
     "arrowdown":[224,240],
@@ -263,6 +264,12 @@ playerObjects = {
         "type":"npc",
         "collision":true,
         "attackable":true
+    },
+    "hitsplat":{
+        "name":"hitsplat",
+        "sprite":baseTiles['hitsplat'],
+        "type":"object",
+        "collision":false,
     },
     "pebble":{
         "name":"pebble",
